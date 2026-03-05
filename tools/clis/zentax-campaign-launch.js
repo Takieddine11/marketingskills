@@ -231,6 +231,8 @@ async function main() {
     name: COPY_FR.campaign_name,
     objective: 'OUTCOME_TRAFFIC',
     status,
+    special_ad_categories: '[]',
+    is_adset_budget_sharing_enabled: false,
   })
   log(`  ✓ Campaign ID: ${campaign.id}`)
 
