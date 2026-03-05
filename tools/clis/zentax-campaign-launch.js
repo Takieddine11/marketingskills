@@ -231,7 +231,6 @@ async function main() {
     name: COPY_FR.campaign_name,
     objective: 'OUTCOME_TRAFFIC',
     status,
-    special_ad_categories: [],
   })
   log(`  ✓ Campaign ID: ${campaign.id}`)
 
