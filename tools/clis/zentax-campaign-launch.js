@@ -138,7 +138,7 @@ async function api(method, endpoint, body) {
     body: params.toString(),
   })
   const data = await res.json()
-  if (data.error) throw new Error(`Meta API: ${data.error.message} (code ${data.error.code})`)
+  if (data.error) throw new Error(`Meta API: ${JSON.stringify(data.error)}`)
   return data
 }
 
