@@ -277,7 +277,7 @@ async function buildCampaign(lang, imagePath, dailyBudgetCAD, status) {
   const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
     name: `${copy.ad_name} Creative`,
     object_story_spec: {
-      page_id: args['page-id'] || process.env.META_PAGE_ID || 'YOUR_PAGE_ID',
+      page_id: args['page-id'] || process.env.META_PAGE_ID || '676813882182100',
       link_data: {
         image_hash: imageHash,
         link: copy.link_url,
