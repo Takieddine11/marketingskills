@@ -121,10 +121,21 @@ async function api(method, endpoint, body) {
     if (body) log('  ' + JSON.stringify(body, null, 2).split('\n').join('\n  '))
     return { id: `DRY_${Math.random().toString(36).slice(2, 7).toUpperCase()}` }
   }
+  const params = new URLSearchParams()
+  params.append('access_token', TOKEN)
+  if (body) {
+    for (const [k, v] of Object.entries(body)) {
+      if (Array.isArray(v) || (typeof v === 'object' && v !== null)) {
+        params.append(k, JSON.stringify(v))
+      } else {
+        params.append(k, String(v))
+      }
+    }
+  }
   const res = await fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
   })
   const data = await res.json()
   if (data.error) throw new Error(`Meta API: ${data.error.message} (code ${data.error.code})`)
