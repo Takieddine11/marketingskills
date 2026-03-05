@@ -218,7 +218,7 @@ async function main() {
   log('\n[1/3] Creating campaign...')
   const campaign = await api('POST', `/act_${ACCOUNT_ID}/campaigns`, {
     name: COPY_FR.campaign_name,
-    objective: 'LINK_CLICKS',
+    objective: 'OUTCOME_TRAFFIC',
     status,
     special_ad_categories: [],
   })
@@ -230,7 +230,7 @@ async function main() {
     name: COPY_FR.adset_name,
     campaign_id: campaign.id,
     billing_event: 'IMPRESSIONS',
-    optimization_goal: 'LINK_CLICKS',
+    optimization_goal: 'LANDING_PAGE_VIEWS',
     daily_budget: dailyBudgetCents,
     bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
     targeting: TARGETING_FR,
