@@ -6,7 +6,7 @@
  *
  * Usage (PowerShell):
  *   $env:META_ACCESS_TOKEN = "your_token"
- *   $env:META_AD_ACCOUNT_ID = "10210468891939768"
+ *   $env:META_AD_ACCOUNT_ID = "2189765574795573"
  *
  *   # Dry run — safe preview, no API calls:
  *   node zentax-campaign-launch.js --dry-run --fr-dir "C:\Users\takie\Downloads\Creatives"
@@ -26,7 +26,7 @@ const path = require('path')
 
 const TOKEN = process.env.META_ACCESS_TOKEN
 const RAW_ACCOUNT_ID = process.env.META_AD_ACCOUNT_ID || ''
-const ACCOUNT_ID = RAW_ACCOUNT_ID.replace(/^act_/, '')
+const ACCOUNT_ID = RAW_ACCOUNT_ID.replace(/^act_/, '') || '2189765574795573'
 const BASE_URL = 'https://graph.facebook.com/v18.0'
 const PAGE_ID = '676813882182100'
 
