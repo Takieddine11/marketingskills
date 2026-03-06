@@ -19,6 +19,7 @@
  *   --daily-budget <num>    Daily budget in CAD for the ad set (default: 100)
  *   --status <status>       PAUSED or ACTIVE (default: PAUSED)
  *   --dry-run               Preview all API calls without sending anything
+ *   --find-targeting        Query Meta API for correct Quebec region key + French locale ID
  */
 
 const fs = require('fs')
@@ -384,7 +385,42 @@ async function main() {
   log(`═══════════════════════════════════════════════════\n`)
 }
 
-main().catch(err => {
-  console.error('\nFatal error:', err.message)
-  process.exit(1)
-})
+async function findTargeting() {
+  if (!TOKEN) {
+    console.error('Error: META_ACCESS_TOKEN is not set.')
+    process.exit(1)
+  }
+  console.log('\n Looking up correct targeting keys from Meta API...\n')
+
+  // Quebec region key
+  const geoUrl = `${BASE_URL}/search?type=adgeolocation&q=Quebec&location_types=%5B%22region%22%5D&country_code=CA&access_token=${TOKEN}`
+  const geoRes = await fetch(geoUrl)
+  const geoData = await geoRes.json()
+  console.log('=== Quebec region results ===')
+  if (geoData.data && geoData.data.length > 0) {
+    geoData.data.forEach(r => console.log(`  key: "${r.key}"  name: "${r.name}"  country: "${r.country_code || r.country}"`))
+  } else {
+    console.log('  No results or error:', JSON.stringify(geoData))
+  }
+
+  // French locale ID
+  const localeUrl = `${BASE_URL}/search?type=adlocale&q=French&access_token=${TOKEN}`
+  const localeRes = await fetch(localeUrl)
+  const localeData = await localeRes.json()
+  console.log('\n=== French locale results ===')
+  if (localeData.data && localeData.data.length > 0) {
+    localeData.data.forEach(r => console.log(`  key: ${r.key}  name: "${r.name}"`))
+  } else {
+    console.log('  No results or error:', JSON.stringify(localeData))
+  }
+  console.log('\nUpdate TARGETING_FR in the script with the correct key values above.\n')
+}
+
+if (args['find-targeting']) {
+  findTargeting().catch(err => { console.error(err.message); process.exit(1) })
+} else {
+  main().catch(err => {
+    console.error('\nFatal error:', err.message)
+    process.exit(1)
+  })
+}
