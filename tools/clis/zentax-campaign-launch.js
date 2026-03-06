@@ -21,6 +21,9 @@
  *   --daily-budget <num>          Daily budget in CAD per ad set (default: 100)
  *   --status <status>             PAUSED or ACTIVE (default: PAUSED)
  *   --retarget-audience-id <id>   Meta custom audience ID for website visitors
+ *   --skip-traffic                Skip the Traffic campaign (useful if it already exists)
+ *   --skip-retarget               Skip the Retargeting campaign
+ *   --skip-funnel                 Skip the Full Funnel campaign
  *   --dry-run                     Preview all API calls without sending anything
  *   --find-targeting              Query Meta API for Quebec region key + French locale ID
  */
@@ -418,9 +421,17 @@ async function main() {
   const dailyBudgetCents = Math.round(dailyBudget * 100)
   const status = args.status || 'PAUSED'
   const retargetAudienceId = args['retarget-audience-id']
+  const skipTraffic  = !!args['skip-traffic']
+  const skipRetarget = !!args['skip-retarget']
+  const skipFunnel   = !!args['skip-funnel']
 
   const imgCount = creatives.filter(f => !isVideo(f)).length
   const vidCount = creatives.filter(f => isVideo(f)).length
+  const planned = [
+    !skipTraffic  && 'Traffic',
+    !skipRetarget && retargetAudienceId && 'Retargeting',
+    !skipFunnel   && 'Full Funnel',
+  ].filter(Boolean)
 
   log(`\n${'═'.repeat(51)}`)
   log(`  Zentax Campaign Launcher${DRY_RUN ? ' [DRY RUN]' : ''}`)
@@ -430,50 +441,64 @@ async function main() {
   log(`  Status     : ${status}`)
   log(`  Creatives  : ${creatives.length} (${imgCount} image${imgCount !== 1 ? 's' : ''}, ${vidCount} video${vidCount !== 1 ? 's' : ''})`)
   creatives.forEach((c, i) => log(`    [${i + 1}] ${path.basename(c)} (${isVideo(c) ? 'video' : 'image'})`))
-  log(`  Campaigns  : Traffic + ${retargetAudienceId ? 'Retargeting + ' : '(no retarget audience provided) '}Full Funnel`)
+  log(`  Campaigns  : ${planned.join(' + ') || '(none selected)'}`)
   log(`${'═'.repeat(51)}`)
 
   const allResults = []
+  let step = 1
+  const total = planned.length
 
   // ── 1. Traffic (cold) ──
-  const traffic = await runCampaign({
-    label: '1/3  TRAFFIC — Cold Quebec/French audience',
-    copy: COPY_TRAFFIC,
-    targeting: TARGETING_TRAFFIC,
-    objective: 'OUTCOME_TRAFFIC',
-    creatives,
-    status,
-    dailyBudgetCents,
-  })
-  allResults.push({ name: 'Traffic', ...traffic })
-
-  // ── 2. Retargeting ──
-  if (retargetAudienceId) {
-    const retarget = await runCampaign({
-      label: '2/3  RETARGETING — Website visitors',
-      copy: COPY_RETARGET,
-      targeting: targetingRetarget(retargetAudienceId),
+  if (!skipTraffic) {
+    const traffic = await runCampaign({
+      label: `${step++}/${total}  TRAFFIC — Cold Quebec/French audience`,
+      copy: COPY_TRAFFIC,
+      targeting: TARGETING_TRAFFIC,
       objective: 'OUTCOME_TRAFFIC',
       creatives,
       status,
       dailyBudgetCents,
     })
-    allResults.push({ name: 'Retargeting', ...retarget })
+    allResults.push({ name: 'Traffic', ...traffic })
   } else {
-    log(`\n  ⚠  Skipping Retargeting campaign — pass --retarget-audience-id <id> to enable it.`)
+    log(`\n  ↷  Skipping Traffic campaign (--skip-traffic)`)
+  }
+
+  // ── 2. Retargeting ──
+  if (!skipRetarget) {
+    if (retargetAudienceId) {
+      const retarget = await runCampaign({
+        label: `${step++}/${total}  RETARGETING — Website visitors`,
+        copy: COPY_RETARGET,
+        targeting: targetingRetarget(retargetAudienceId),
+        objective: 'OUTCOME_TRAFFIC',
+        creatives,
+        status,
+        dailyBudgetCents,
+      })
+      allResults.push({ name: 'Retargeting', ...retarget })
+    } else {
+      log(`\n  ⚠  Skipping Retargeting — pass --retarget-audience-id <id> to enable it.`)
+    }
+  } else {
+    log(`\n  ↷  Skipping Retargeting campaign (--skip-retarget)`)
   }
 
   // ── 3. Full Funnel ──
-  const funnel = await runCampaign({
-    label: `${retargetAudienceId ? '3' : '2'}/3  FULL FUNNEL — Conversion-focused, broader targeting`,
-    copy: COPY_FUNNEL,
-    targeting: TARGETING_FUNNEL,
-    objective: 'OUTCOME_LEADS',
+  if (!skipFunnel) {
+    const funnel = await runCampaign({
+      label: `${step++}/${total}  FULL FUNNEL — Conversion-focused, broader targeting`,
+      copy: COPY_FUNNEL,
+      targeting: TARGETING_FUNNEL,
+      objective: 'OUTCOME_LEADS',
     creatives,
-    status,
-    dailyBudgetCents,
-  })
-  allResults.push({ name: 'Full Funnel', ...funnel })
+      status,
+      dailyBudgetCents,
+    })
+    allResults.push({ name: 'Full Funnel', ...funnel })
+  } else {
+    log(`\n  ↷  Skipping Full Funnel campaign (--skip-funnel)`)
+  }
 
   // ── Summary ──
   log(`\n${'═'.repeat(51)}`)
