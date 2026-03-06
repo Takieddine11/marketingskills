@@ -204,16 +204,24 @@ function isVideo(filePath) {
   return /\.(mp4|mov)$/i.test(filePath)
 }
 
-function findThumbnail(videoPath, fallbackDir) {
+function findThumbnail(videoPath, fallbackDir, globalThumbnail) {
+  // 1. Exact name match (video.mp4 → video.jpg)
   const base = videoPath.replace(/\.(mp4|mov)$/i, '')
   for (const ext of ['.jpg', '.jpeg', '.png']) {
     if (fs.existsSync(base + ext)) return base + ext
     if (fs.existsSync(base + ext.toUpperCase())) return base + ext.toUpperCase()
   }
-  // Fallback: use any image in the same folder (or fallbackDir)
-  const searchDir = fallbackDir || path.dirname(videoPath)
-  const anyImage = fs.readdirSync(searchDir).find(f => /\.(jpe?g|png)$/i.test(f))
-  if (anyImage) return path.join(searchDir, anyImage)
+  // 2. Any image in the same folder
+  const sameDir = path.dirname(videoPath)
+  const anyInSame = fs.readdirSync(sameDir).find(f => /\.(jpe?g|png)$/i.test(f))
+  if (anyInSame) return path.join(sameDir, anyInSame)
+  // 3. Any image in fallbackDir (e.g. retarget-dir)
+  if (fallbackDir && fallbackDir !== sameDir) {
+    const anyInFallback = fs.readdirSync(fallbackDir).find(f => /\.(jpe?g|png)$/i.test(f))
+    if (anyInFallback) return path.join(fallbackDir, anyInFallback)
+  }
+  // 4. Explicit --thumbnail flag
+  if (globalThumbnail) return globalThumbnail
   return null
 }
 
@@ -309,7 +317,7 @@ function getCreatives(dir) {
 
 // ─── Run one campaign ──────────────────────────────────────────────────────────
 
-async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label, thumbnailFallbackDir }) {
+async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label, thumbnailFallbackDir, globalThumbnail }) {
   const ADS_PER_ADSET = 50
   const chunks = []
   for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
@@ -359,7 +367,7 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LAN
 
       let storySpec
       if (isVideo(filePath)) {
-        const thumbPath = findThumbnail(filePath, thumbnailFallbackDir)
+        const thumbPath = findThumbnail(filePath, thumbnailFallbackDir, globalThumbnail)
         if (!thumbPath) {
           throw new Error(
             `No thumbnail found for ${path.basename(filePath)}.\n` +
@@ -451,6 +459,7 @@ async function main() {
   const skipTraffic  = !!args['skip-traffic']
   const skipRetarget = !!args['skip-retarget']
   const skipFunnel   = !!args['skip-funnel']
+  const globalThumbnail = args['thumbnail'] || null
 
   const imgCount = creatives.filter(f => !isVideo(f)).length
   const vidCount = creatives.filter(f => isVideo(f)).length
@@ -487,6 +496,8 @@ async function main() {
       creatives,
       status,
       dailyBudgetCents,
+      thumbnailFallbackDir: retargetDir,
+      globalThumbnail,
     })
     allResults.push({ name: 'Traffic', ...traffic })
   } else {
@@ -506,6 +517,7 @@ async function main() {
         status,
         dailyBudgetCents,
         thumbnailFallbackDir: retargetDir,
+        globalThumbnail,
       })
       allResults.push({ name: 'Retargeting', ...retarget })
     } else {
@@ -526,6 +538,8 @@ async function main() {
       creatives,
       status,
       dailyBudgetCents,
+      thumbnailFallbackDir: retargetDir,
+      globalThumbnail,
     })
     allResults.push({ name: 'Full Funnel', ...funnel })
   } else {
