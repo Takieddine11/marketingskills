@@ -132,7 +132,7 @@ Agissez avant que les délais fiscaux ne vous rattrapent.`,
 
 // ─── Targeting ────────────────────────────────────────────────────────────────
 
-const BASE_GEO = { geo_locations: { regions: [{ key: '3870' }] }, locales: [12], age_min: 25, age_max: 65 }
+const BASE_GEO = { geo_locations: { regions: [{ key: '3870' }] }, locales: [12], age_min: 25 }
 
 // Cold audience
 const TARGETING_TRAFFIC = { ...BASE_GEO }
@@ -143,7 +143,7 @@ function targetingRetarget(audienceId) {
 }
 
 // Full funnel — broadest, let Meta optimize (Advantage+ style)
-const TARGETING_FUNNEL = { ...BASE_GEO, age_min: 24, age_max: 66 }
+const TARGETING_FUNNEL = { ...BASE_GEO, age_min: 24 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -204,12 +204,16 @@ function isVideo(filePath) {
   return /\.(mp4|mov)$/i.test(filePath)
 }
 
-function findThumbnail(videoPath) {
+function findThumbnail(videoPath, fallbackDir) {
   const base = videoPath.replace(/\.(mp4|mov)$/i, '')
   for (const ext of ['.jpg', '.jpeg', '.png']) {
     if (fs.existsSync(base + ext)) return base + ext
     if (fs.existsSync(base + ext.toUpperCase())) return base + ext.toUpperCase()
   }
+  // Fallback: use any image in the same folder (or fallbackDir)
+  const searchDir = fallbackDir || path.dirname(videoPath)
+  const anyImage = fs.readdirSync(searchDir).find(f => /\.(jpe?g|png)$/i.test(f))
+  if (anyImage) return path.join(searchDir, anyImage)
   return null
 }
 
@@ -283,15 +287,29 @@ async function uploadVideo(videoPath) {
 
 function getCreatives(dir) {
   if (!fs.existsSync(dir)) throw new Error(`Directory not found: ${dir}`)
-  return fs.readdirSync(dir)
-    .filter(f => /\.(jpe?g|png|mp4|mov)$/i.test(f))
+  const allFiles = fs.readdirSync(dir).filter(f => /\.(jpe?g|png|mp4|mov)$/i.test(f))
+  // Build set of video base names so we can exclude their thumbnail images
+  const videoBasenames = new Set(
+    allFiles
+      .filter(f => /\.(mp4|mov)$/i.test(f))
+      .map(f => f.replace(/\.(mp4|mov)$/i, '').toLowerCase())
+  )
+  return allFiles
+    .filter(f => {
+      if (/\.(jpe?g|png)$/i.test(f)) {
+        // Skip images that are thumbnails for a video in the same folder
+        const base = f.replace(/\.(jpe?g|png)$/i, '').toLowerCase()
+        if (videoBasenames.has(base)) return false
+      }
+      return true
+    })
     .map(f => path.join(dir, f))
     .sort()
 }
 
 // ─── Run one campaign ──────────────────────────────────────────────────────────
 
-async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label }) {
+async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label, thumbnailFallbackDir }) {
   const ADS_PER_ADSET = 50
   const chunks = []
   for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
@@ -341,11 +359,12 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LAN
 
       let storySpec
       if (isVideo(filePath)) {
-        const thumbPath = findThumbnail(filePath)
+        const thumbPath = findThumbnail(filePath, thumbnailFallbackDir)
         if (!thumbPath) {
           throw new Error(
             `No thumbnail found for ${path.basename(filePath)}.\n` +
-            `  Create: ${path.basename(filePath).replace(/\.(mp4|mov)$/i, '')}.jpg`
+            `  Create: ${path.basename(filePath).replace(/\.(mp4|mov)$/i, '')}.jpg\n` +
+            `  Or add any .jpg/.png image to the folder as a fallback thumbnail.`
           )
         }
         const videoId = await uploadVideo(filePath)
@@ -486,6 +505,7 @@ async function main() {
         creatives: retargetCreatives,
         status,
         dailyBudgetCents,
+        thumbnailFallbackDir: retargetDir,
       })
       allResults.push({ name: 'Retargeting', ...retarget })
     } else {
