@@ -17,7 +17,8 @@
  *   node zentax-campaign-launch.js --fr-dir "C:\Users\takie\Downloads\Creatives" --daily-budget 65 --retarget-audience-id 123456789
  *
  * Options:
- *   --fr-dir <path>               Folder of French creatives (.jpg/.png/.mp4/.mov)
+ *   --fr-dir <path>               Folder of Traffic + Full Funnel creatives (.jpg/.png/.mp4/.mov)
+ *   --retarget-dir <path>         Folder of Retargeting creatives (defaults to --fr-dir if omitted)
  *   --daily-budget <num>          Daily budget in CAD per ad set (default: 100)
  *   --status <status>             PAUSED or ACTIVE (default: PAUSED)
  *   --retarget-audience-id <id>   Meta custom audience ID for website visitors
@@ -417,6 +418,13 @@ async function main() {
     process.exit(1)
   }
 
+  const retargetDir = args['retarget-dir'] || frDir
+  const retargetCreatives = getCreatives(retargetDir)
+  if (retargetCreatives.length === 0) {
+    console.error(`No .jpg/.jpeg/.png/.mp4/.mov files found in retarget-dir: ${retargetDir}`)
+    process.exit(1)
+  }
+
   const dailyBudget = parseFloat(args['daily-budget'] || '100')
   const dailyBudgetCents = Math.round(dailyBudget * 100)
   const status = args.status || 'PAUSED'
@@ -427,6 +435,8 @@ async function main() {
 
   const imgCount = creatives.filter(f => !isVideo(f)).length
   const vidCount = creatives.filter(f => isVideo(f)).length
+  const rImgCount = retargetCreatives.filter(f => !isVideo(f)).length
+  const rVidCount = retargetCreatives.filter(f => isVideo(f)).length
   const planned = [
     !skipTraffic  && 'Traffic',
     !skipRetarget && retargetAudienceId && 'Retargeting',
@@ -439,8 +449,8 @@ async function main() {
   log(`  Account    : act_${ACCOUNT_ID}`)
   log(`  Budget     : $${dailyBudget} CAD/day per ad set`)
   log(`  Status     : ${status}`)
-  log(`  Creatives  : ${creatives.length} (${imgCount} image${imgCount !== 1 ? 's' : ''}, ${vidCount} video${vidCount !== 1 ? 's' : ''})`)
-  creatives.forEach((c, i) => log(`    [${i + 1}] ${path.basename(c)} (${isVideo(c) ? 'video' : 'image'})`))
+  log(`  Traffic/Funnel creatives : ${creatives.length} (${imgCount} img, ${vidCount} vid) — ${frDir}`)
+  log(`  Retargeting creatives    : ${retargetCreatives.length} (${rImgCount} img, ${rVidCount} vid) — ${retargetDir}`)
   log(`  Campaigns  : ${planned.join(' + ') || '(none selected)'}`)
   log(`${'═'.repeat(51)}`)
 
@@ -472,7 +482,7 @@ async function main() {
         copy: COPY_RETARGET,
         targeting: targetingRetarget(retargetAudienceId),
         objective: 'OUTCOME_TRAFFIC',
-        creatives,
+        creatives: retargetCreatives,
         status,
         dailyBudgetCents,
       })
