@@ -274,83 +274,94 @@ async function main() {
   })
   log(`  ✓ Campaign ID: ${campaign.id}`)
 
-  // Step 2: Create Ad Set
-  log('\n[2/3] Creating ad set...')
-  const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, {
-    name: COPY_FR.adset_name,
-    campaign_id: campaign.id,
-    billing_event: 'IMPRESSIONS',
-    optimization_goal: 'LANDING_PAGE_VIEWS',
-    daily_budget: dailyBudgetCents,
-    bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-    targeting: TARGETING_FR,
-    status,
-  })
-  log(`  ✓ Ad Set ID: ${adset.id}`)
+  // Split creatives into chunks of 50 (Meta's per-ad-set limit)
+  const ADS_PER_ADSET = 50
+  const chunks = []
+  for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) {
+    chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
+  }
+  const totalAdsets = chunks.length
+  if (totalAdsets > 1) {
+    log(`\n  Note: ${creatives.length} creatives → split across ${totalAdsets} ad sets (max 50 ads each)`)
+  }
 
-  // Step 3: Upload creative + create creative + create ad — once per file
-  log(`\n[3/3] Creating ${creatives.length} ads (one per creative)...`)
+  // Steps 2 & 3: one ad set per chunk
   const adResults = []
+  const adsetIds = []
 
-  for (let i = 0; i < creatives.length; i++) {
-    const filePath = creatives[i]
-    const adLabel = `Zentax FR - Creative ${i + 1}`
-    const fileType = isVideo(filePath) ? 'video' : 'image'
-    log(`\n  [${i + 1}/${creatives.length}] ${path.basename(filePath)} (${fileType})`)
+  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+    const chunk = chunks[chunkIdx]
+    const adsetSuffix = totalAdsets > 1 ? ` (${chunkIdx + 1}/${totalAdsets})` : ''
+    const adsetName = totalAdsets > 1
+      ? `${COPY_FR.adset_name} - Part ${chunkIdx + 1}`
+      : COPY_FR.adset_name
 
-    let storySpec
-    if (isVideo(filePath)) {
-      // Upload video
-      const videoId = await uploadVideo(filePath)
-      log(`    ✓ Uploaded  → video_id: ${videoId}`)
-      storySpec = {
-        page_id: PAGE_ID,
-        video_data: {
-          video_id: videoId,
-          message: COPY_FR.body,
-          title: COPY_FR.headline,
-          call_to_action: {
-            type: 'LEARN_MORE',
-            value: { link: COPY_FR.link_url },
-          },
-        },
-      }
-    } else {
-      // Upload image
-      const imageHash = await uploadImage(filePath)
-      log(`    ✓ Uploaded  → hash: ${imageHash}`)
-      storySpec = {
-        page_id: PAGE_ID,
-        link_data: {
-          image_hash: imageHash,
-          link: COPY_FR.link_url,
-          message: COPY_FR.body,
-          name: COPY_FR.headline,
-          call_to_action: {
-            type: 'LEARN_MORE',
-            value: { link: COPY_FR.link_url },
-          },
-        },
-      }
-    }
-
-    // Create creative
-    const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
-      name: `${adLabel} Creative`,
-      object_story_spec: storySpec,
-    })
-    log(`    ✓ Creative  → ID: ${creative.id}`)
-
-    // Create ad
-    const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, {
-      name: adLabel,
-      adset_id: adset.id,
-      creative: { creative_id: creative.id },
+    log(`\n[${chunkIdx * 2 + 2}] Creating ad set${adsetSuffix}...`)
+    const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, {
+      name: adsetName,
+      campaign_id: campaign.id,
+      billing_event: 'IMPRESSIONS',
+      optimization_goal: 'LANDING_PAGE_VIEWS',
+      daily_budget: dailyBudgetCents,
+      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+      targeting: TARGETING_FR,
       status,
     })
-    log(`    ✓ Ad        → ID: ${ad.id}`)
+    log(`  ✓ Ad Set ID: ${adset.id}`)
+    adsetIds.push(adset.id)
 
-    adResults.push({ file: path.basename(filePath), type: fileType, creative_id: creative.id, ad_id: ad.id })
+    log(`\n  Creating ${chunk.length} ads for this ad set...`)
+    for (let j = 0; j < chunk.length; j++) {
+      const filePath = chunk[j]
+      const globalIdx = chunkIdx * ADS_PER_ADSET + j + 1
+      const adLabel = `Zentax FR - Creative ${globalIdx}`
+      const fileType = isVideo(filePath) ? 'video' : 'image'
+      log(`\n  [${globalIdx}/${creatives.length}] ${path.basename(filePath)} (${fileType})`)
+
+      let storySpec
+      if (isVideo(filePath)) {
+        const videoId = await uploadVideo(filePath)
+        log(`    ✓ Uploaded  → video_id: ${videoId}`)
+        storySpec = {
+          page_id: PAGE_ID,
+          video_data: {
+            video_id: videoId,
+            message: COPY_FR.body,
+            title: COPY_FR.headline,
+            call_to_action: { type: 'LEARN_MORE', value: { link: COPY_FR.link_url } },
+          },
+        }
+      } else {
+        const imageHash = await uploadImage(filePath)
+        log(`    ✓ Uploaded  → hash: ${imageHash}`)
+        storySpec = {
+          page_id: PAGE_ID,
+          link_data: {
+            image_hash: imageHash,
+            link: COPY_FR.link_url,
+            message: COPY_FR.body,
+            name: COPY_FR.headline,
+            call_to_action: { type: 'LEARN_MORE', value: { link: COPY_FR.link_url } },
+          },
+        }
+      }
+
+      const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
+        name: `${adLabel} Creative`,
+        object_story_spec: storySpec,
+      })
+      log(`    ✓ Creative  → ID: ${creative.id}`)
+
+      const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, {
+        name: adLabel,
+        adset_id: adset.id,
+        creative: { creative_id: creative.id },
+        status,
+      })
+      log(`    ✓ Ad        → ID: ${ad.id}`)
+
+      adResults.push({ file: path.basename(filePath), type: fileType, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id })
+    }
   }
 
   // Summary
@@ -358,15 +369,17 @@ async function main() {
   log(`  Done!`)
   log(`═══════════════════════════════════════════════════`)
   log(`  Campaign ID : ${campaign.id}`)
-  log(`  Ad Set ID   : ${adset.id}`)
+  log(`  Ad Sets     : ${adsetIds.length}`)
+  adsetIds.forEach((id, i) => log(`    [${i + 1}] ${id}`))
   log(`  Ads created : ${adResults.length}`)
   adResults.forEach((r, i) => {
     log(`\n  [Ad ${i + 1}] ${r.file} (${r.type})`)
+    log(`    adset_id    : ${r.adset_id}`)
     log(`    creative_id : ${r.creative_id}`)
     log(`    ad_id       : ${r.ad_id}`)
   })
   log(`\n  All ads are PAUSED. Review in Meta Ads Manager,`)
-  log(`  then activate the ad set when ready.`)
+  log(`  then activate the ad set(s) when ready.`)
   log(`  https://adsmanager.facebook.com/`)
   log(`═══════════════════════════════════════════════════\n`)
 }
