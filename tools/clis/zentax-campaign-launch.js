@@ -147,6 +147,15 @@ function isVideo(filePath) {
   return /\.(mp4|mov)$/i.test(filePath)
 }
 
+function findThumbnail(videoPath) {
+  const base = videoPath.replace(/\.(mp4|mov)$/i, '')
+  for (const ext of ['.jpg', '.jpeg', '.png']) {
+    if (fs.existsSync(base + ext)) return base + ext
+    if (fs.existsSync(base + ext.toUpperCase())) return base + ext.toUpperCase()
+  }
+  return null
+}
+
 function buildMultipart(fields, fileField, filename, mimeType, fileBuffer) {
   const boundary = `----FormBoundary${Math.random().toString(36).slice(2)}`
   const CRLF = '\r\n'
@@ -321,12 +330,22 @@ async function main() {
 
       let storySpec
       if (isVideo(filePath)) {
+        const thumbPath = findThumbnail(filePath)
+        if (!thumbPath) {
+          throw new Error(
+            `No thumbnail found for ${path.basename(filePath)}.\n` +
+            `  Create a matching image file: ${path.basename(filePath).replace(/\.(mp4|mov)$/i, '')}.jpg`
+          )
+        }
         const videoId = await uploadVideo(filePath)
         log(`    ✓ Uploaded  → video_id: ${videoId}`)
+        const thumbHash = await uploadImage(thumbPath)
+        log(`    ✓ Thumbnail → hash: ${thumbHash} (${path.basename(thumbPath)})`)
         storySpec = {
           page_id: PAGE_ID,
           video_data: {
             video_id: videoId,
+            image_hash: thumbHash,
             message: COPY_FR.body,
             title: COPY_FR.headline,
             call_to_action: { type: 'LEARN_MORE', value: { link: COPY_FR.link_url } },
