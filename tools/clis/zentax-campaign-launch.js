@@ -291,7 +291,7 @@ function getCreatives(dir) {
 
 // ─── Run one campaign ──────────────────────────────────────────────────────────
 
-async function runCampaign({ copy, targeting, objective, creatives, status, dailyBudgetCents, label }) {
+async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label }) {
   const ADS_PER_ADSET = 50
   const chunks = []
   for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
@@ -323,7 +323,7 @@ async function runCampaign({ copy, targeting, objective, creatives, status, dail
       name: adsetName,
       campaign_id: campaign.id,
       billing_event: 'IMPRESSIONS',
-      optimization_goal: 'LANDING_PAGE_VIEWS',
+      optimization_goal: optimizationGoal,
       daily_budget: dailyBudgetCents,
       bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
       targeting,
@@ -481,7 +481,8 @@ async function main() {
         label: `${step++}/${total}  RETARGETING — Website visitors`,
         copy: COPY_RETARGET,
         targeting: targetingRetarget(retargetAudienceId),
-        objective: 'OUTCOME_TRAFFIC',
+        objective: 'OUTCOME_LEADS',
+        optimizationGoal: 'QUALITY_LEAD',
         creatives: retargetCreatives,
         status,
         dailyBudgetCents,
@@ -501,7 +502,8 @@ async function main() {
       copy: COPY_FUNNEL,
       targeting: TARGETING_FUNNEL,
       objective: 'OUTCOME_LEADS',
-    creatives,
+      optimizationGoal: 'QUALITY_LEAD',
+      creatives,
       status,
       dailyBudgetCents,
     })
