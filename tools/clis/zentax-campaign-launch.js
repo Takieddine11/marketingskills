@@ -15,7 +15,7 @@
  *   node zentax-campaign-launch.js --fr-dir "C:\Users\takie\Downloads\Creatives" --daily-budget 100
  *
  * Options:
- *   --fr-dir <path>         Folder of French creative images (all .jpg/.jpeg/.png)
+ *   --fr-dir <path>         Folder of French creatives (images .jpg/.png and videos .mp4/.mov)
  *   --daily-budget <num>    Daily budget in CAD for the ad set (default: 100)
  *   --status <status>       PAUSED or ACTIVE (default: PAUSED)
  *   --dry-run               Preview all API calls without sending anything
@@ -142,34 +142,48 @@ async function api(method, endpoint, body) {
   return data
 }
 
+function isVideo(filePath) {
+  return /\.(mp4|mov)$/i.test(filePath)
+}
+
+function buildMultipart(fields, fileField, filename, mimeType, fileBuffer) {
+  const boundary = `----FormBoundary${Math.random().toString(36).slice(2)}`
+  const CRLF = '\r\n'
+  const parts = []
+
+  for (const [name, value] of Object.entries(fields)) {
+    parts.push(Buffer.from(
+      `--${boundary}${CRLF}` +
+      `Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
+      `${value}${CRLF}`
+    ))
+  }
+
+  parts.push(Buffer.from(
+    `--${boundary}${CRLF}` +
+    `Content-Disposition: form-data; name="${fileField}"; filename="${filename}"${CRLF}` +
+    `Content-Type: ${mimeType}${CRLF}${CRLF}`
+  ))
+  parts.push(fileBuffer)
+  parts.push(Buffer.from(`${CRLF}--${boundary}--${CRLF}`))
+
+  return { body: Buffer.concat(parts), boundary }
+}
+
 async function uploadImage(imagePath) {
   const filename = path.basename(imagePath)
   if (DRY_RUN) {
     log(`[DRY-RUN] Upload image: ${filename}`)
     return `DRY_HASH_${Math.random().toString(36).slice(2, 10).toUpperCase()}`
   }
-  const imageBuffer = fs.readFileSync(imagePath)
-  const boundary = `----FormBoundary${Math.random().toString(36).slice(2)}`
-  const CRLF = '\r\n'
-
-  // Build multipart body manually (no external deps)
-  const headerPart = Buffer.from(
-    `--${boundary}${CRLF}` +
-    `Content-Disposition: form-data; name="access_token"${CRLF}${CRLF}` +
-    `${TOKEN}${CRLF}` +
-    `--${boundary}${CRLF}` +
-    `Content-Disposition: form-data; name="filename"; filename="${filename}"${CRLF}` +
-    `Content-Type: image/jpeg${CRLF}${CRLF}`
+  const { body, boundary } = buildMultipart(
+    { access_token: TOKEN },
+    'filename', filename, 'image/jpeg',
+    fs.readFileSync(imagePath)
   )
-  const footerPart = Buffer.from(`${CRLF}--${boundary}--${CRLF}`)
-  const body = Buffer.concat([headerPart, imageBuffer, footerPart])
-
   const res = await fetch(`${BASE_URL}/act_${ACCOUNT_ID}/adimages`, {
     method: 'POST',
-    headers: {
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      'Content-Length': body.length,
-    },
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length },
     body,
   })
   const data = await res.json()
@@ -178,10 +192,32 @@ async function uploadImage(imagePath) {
   return data.images[key].hash
 }
 
-function getImages(dir) {
+async function uploadVideo(videoPath) {
+  const filename = path.basename(videoPath)
+  if (DRY_RUN) {
+    log(`[DRY-RUN] Upload video: ${filename}`)
+    return `DRY_VIDEO_ID_${Math.random().toString(36).slice(2, 10).toUpperCase()}`
+  }
+  const mime = /\.mov$/i.test(videoPath) ? 'video/quicktime' : 'video/mp4'
+  const { body, boundary } = buildMultipart(
+    { access_token: TOKEN, title: filename },
+    'source', filename, mime,
+    fs.readFileSync(videoPath)
+  )
+  const res = await fetch(`${BASE_URL}/act_${ACCOUNT_ID}/advideos`, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length },
+    body,
+  })
+  const data = await res.json()
+  if (data.error) throw new Error(`Video upload (${filename}): ${data.error.message}`)
+  return data.id
+}
+
+function getCreatives(dir) {
   if (!fs.existsSync(dir)) throw new Error(`Directory not found: ${dir}`)
   return fs.readdirSync(dir)
-    .filter(f => /\.(jpe?g|png)$/i.test(f))
+    .filter(f => /\.(jpe?g|png|mp4|mov)$/i.test(f))
     .map(f => path.join(dir, f))
     .sort()
 }
@@ -204,9 +240,9 @@ async function main() {
     process.exit(1)
   }
 
-  const images = getImages(frDir)
-  if (images.length === 0) {
-    console.error(`No .jpg/.jpeg/.png files found in: ${frDir}`)
+  const creatives = getCreatives(frDir)
+  if (creatives.length === 0) {
+    console.error(`No .jpg/.jpeg/.png/.mp4/.mov files found in: ${frDir}`)
     process.exit(1)
   }
 
@@ -221,8 +257,10 @@ async function main() {
   log(`  Campaign   : ${COPY_FR.campaign_name}`)
   log(`  Budget     : $${dailyBudget} CAD/day`)
   log(`  Status     : ${status}`)
-  log(`  Creatives  : ${images.length} images`)
-  images.forEach((img, i) => log(`    [${i + 1}] ${path.basename(img)}`))
+  const imgCount = creatives.filter(f => !isVideo(f)).length
+  const vidCount = creatives.filter(f => isVideo(f)).length
+  log(`  Creatives  : ${creatives.length} total (${imgCount} image${imgCount !== 1 ? 's' : ''}, ${vidCount} video${vidCount !== 1 ? 's' : ''})`)
+  creatives.forEach((c, i) => log(`    [${i + 1}] ${path.basename(c)} (${isVideo(c) ? 'video' : 'image'})`))
   log(`═══════════════════════════════════════════════════`)
 
   // Step 1: Create Campaign
@@ -250,24 +288,38 @@ async function main() {
   })
   log(`  ✓ Ad Set ID: ${adset.id}`)
 
-  // Step 3: Upload image + create creative + create ad — once per image
-  log(`\n[3/3] Creating ${images.length} ads (one per creative)...`)
+  // Step 3: Upload creative + create creative + create ad — once per file
+  log(`\n[3/3] Creating ${creatives.length} ads (one per creative)...`)
   const adResults = []
 
-  for (let i = 0; i < images.length; i++) {
-    const imgPath = images[i]
-    const imgName = path.basename(imgPath, path.extname(imgPath))
+  for (let i = 0; i < creatives.length; i++) {
+    const filePath = creatives[i]
     const adLabel = `Zentax FR - Creative ${i + 1}`
-    log(`\n  [${i + 1}/${images.length}] ${path.basename(imgPath)}`)
+    const fileType = isVideo(filePath) ? 'video' : 'image'
+    log(`\n  [${i + 1}/${creatives.length}] ${path.basename(filePath)} (${fileType})`)
 
-    // Upload image
-    const imageHash = await uploadImage(imgPath)
-    log(`    ✓ Uploaded  → hash: ${imageHash}`)
-
-    // Create creative
-    const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
-      name: `${adLabel} Creative`,
-      object_story_spec: {
+    let storySpec
+    if (isVideo(filePath)) {
+      // Upload video
+      const videoId = await uploadVideo(filePath)
+      log(`    ✓ Uploaded  → video_id: ${videoId}`)
+      storySpec = {
+        page_id: PAGE_ID,
+        video_data: {
+          video_id: videoId,
+          message: COPY_FR.body,
+          title: COPY_FR.headline,
+          call_to_action: {
+            type: 'LEARN_MORE',
+            value: { link: COPY_FR.link_url },
+          },
+        },
+      }
+    } else {
+      // Upload image
+      const imageHash = await uploadImage(filePath)
+      log(`    ✓ Uploaded  → hash: ${imageHash}`)
+      storySpec = {
         page_id: PAGE_ID,
         link_data: {
           image_hash: imageHash,
@@ -279,7 +331,13 @@ async function main() {
             value: { link: COPY_FR.link_url },
           },
         },
-      },
+      }
+    }
+
+    // Create creative
+    const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
+      name: `${adLabel} Creative`,
+      object_story_spec: storySpec,
     })
     log(`    ✓ Creative  → ID: ${creative.id}`)
 
@@ -292,7 +350,7 @@ async function main() {
     })
     log(`    ✓ Ad        → ID: ${ad.id}`)
 
-    adResults.push({ image: path.basename(imgPath), creative_id: creative.id, ad_id: ad.id })
+    adResults.push({ file: path.basename(filePath), type: fileType, creative_id: creative.id, ad_id: ad.id })
   }
 
   // Summary
@@ -303,7 +361,7 @@ async function main() {
   log(`  Ad Set ID   : ${adset.id}`)
   log(`  Ads created : ${adResults.length}`)
   adResults.forEach((r, i) => {
-    log(`\n  [Ad ${i + 1}] ${r.image}`)
+    log(`\n  [Ad ${i + 1}] ${r.file} (${r.type})`)
     log(`    creative_id : ${r.creative_id}`)
     log(`    ad_id       : ${r.ad_id}`)
   })
