@@ -6,7 +6,7 @@
  *
  * Usage (PowerShell):
  *   $env:META_ACCESS_TOKEN = "your_token"
- *   $env:META_AD_ACCOUNT_ID = "2189765574795573"
+ *   $env:META_AD_ACCOUNT_ID = "10210468891939768"
  *
  *   # Dry run — safe preview, no API calls:
  *   node zentax-campaign-launch.js --dry-run --fr-dir "C:\Users\takie\Downloads\Creatives"
