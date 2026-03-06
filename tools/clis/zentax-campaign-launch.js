@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
  * Zentax Campaign Launcher
- * Creates a French (Quebec) Meta Ads campaign with one ad per creative image.
- * Meta automatically optimizes toward the best-performing creative.
+ * Creates three French (Quebec) Meta Ads campaigns:
+ *   1. Traffic      — cold Quebec/French audience
+ *   2. Retargeting  — website visitors (requires --retarget-audience-id)
+ *   3. Full Funnel  — conversion-focused, broader targeting
  *
  * Usage (PowerShell):
  *   $env:META_ACCESS_TOKEN = "your_token"
@@ -11,15 +13,16 @@
  *   # Dry run — safe preview, no API calls:
  *   node zentax-campaign-launch.js --dry-run --fr-dir "C:\Users\takie\Downloads\Creatives"
  *
- *   # Launch for real (starts PAUSED for review):
- *   node zentax-campaign-launch.js --fr-dir "C:\Users\takie\Downloads\Creatives" --daily-budget 100
+ *   # Launch all three campaigns:
+ *   node zentax-campaign-launch.js --fr-dir "C:\Users\takie\Downloads\Creatives" --daily-budget 65 --retarget-audience-id 123456789
  *
  * Options:
- *   --fr-dir <path>         Folder of French creatives (images .jpg/.png and videos .mp4/.mov)
- *   --daily-budget <num>    Daily budget in CAD for the ad set (default: 100)
- *   --status <status>       PAUSED or ACTIVE (default: PAUSED)
- *   --dry-run               Preview all API calls without sending anything
- *   --find-targeting        Query Meta API for correct Quebec region key + French locale ID
+ *   --fr-dir <path>               Folder of French creatives (.jpg/.png/.mp4/.mov)
+ *   --daily-budget <num>          Daily budget in CAD per ad set (default: 100)
+ *   --status <status>             PAUSED or ACTIVE (default: PAUSED)
+ *   --retarget-audience-id <id>   Meta custom audience ID for website visitors
+ *   --dry-run                     Preview all API calls without sending anything
+ *   --find-targeting              Query Meta API for Quebec region key + French locale ID
  */
 
 const fs = require('fs')
@@ -31,9 +34,10 @@ const ACCOUNT_ID = RAW_ACCOUNT_ID.replace(/^act_/, '') || '2189765574795573'
 const BASE_URL = 'https://graph.facebook.com/v18.0'
 const PAGE_ID = '676813882182100'
 
-// ─── Ad Copy (French) ─────────────────────────────────────────────────────────
+// ─── Ad Copy ──────────────────────────────────────────────────────────────────
 
-const COPY_FR = {
+// 1. Traffic (cold audience)
+const COPY_TRAFFIC = {
   headline: 'Ne voudriez-vous pas récupérer 10 heures par mois?',
   body: `Si vous êtes entrepreneur ou propriétaire d'une petite entreprise, vous faites peut-être face à un problème.
 
@@ -77,16 +81,65 @@ Votre entreprise le mérite. Agissez maintenant.
   adset_name: 'Entrepreneurs QC FR - Trafic',
 }
 
-// ─── Targeting (Quebec, French speakers, entrepreneurs age 25-65) ─────────────
+// 2. Retargeting (warm — website visitors)
+const COPY_RETARGET = {
+  headline: 'Encore là? Votre consultation gratuite vous attend.',
+  body: `Vous avez visité zentax.pro récemment.
 
-const TARGETING_FR = {
-  geo_locations: {
-    regions: [{ key: '3870' }], // Quebec
-  },
-  locales: [12], // French
-  age_min: 25,
-  age_max: 65,
+Si vous avez hésité, c'est correct. Mais la confusion financière ne se règle pas toute seule.
+
+Des livres en retard. Des échéances fiscales qui approchent. Des marges que vous n'arrivez pas à calculer.
+
+Nos CPA ont déjà aidé des dizaines de PME québécoises à reprendre le contrôle — rapidement, sans casse-tête.
+
+Réservez votre consultation stratégique gratuite de 30 minutes. Sans engagement. Sans pression.
+
+👉 zentax.pro/funnel-2`,
+  link_url: 'https://zentax.pro/funnel-2',
+  campaign_name: 'Zentax - Retargeting QC FR',
+  adset_name: 'Visiteurs Web QC FR - Retargeting',
 }
+
+// 3. Full Funnel (conversion-focused, broader targeting)
+const COPY_FUNNEL = {
+  headline: '30 minutes avec un CPA peut changer votre entreprise',
+  body: `Vous gérez une PME au Québec?
+
+Si vos livres ne sont pas à jour, si vous ignorez vos marges réelles, si les échéances fiscales vous stressent — vous n'êtes pas seul.
+
+La plupart des PME perdent des milliers de dollars chaque année à cause d'une mauvaise gestion comptable. Ce n'est pas de la négligence — c'est un manque de système.
+
+Zentax offre la Fondation à 3 Piliers : un système simple et complet, conçu pour les entrepreneurs comme vous.
+
+✅ Livres propres et à jour
+✅ Conformité garantie
+✅ Visibilité totale sur vos finances
+✅ Équipe de CPA dédiée
+
+Consultez un expert gratuitement. 30 minutes. Zéro engagement.
+
+👉 zentax.pro/funnel-2
+
+Agissez avant que les délais fiscaux ne vous rattrapent.`,
+  link_url: 'https://zentax.pro/funnel-2',
+  campaign_name: 'Zentax - Funnel Complet QC FR',
+  adset_name: 'Entrepreneurs QC FR - Funnel',
+}
+
+// ─── Targeting ────────────────────────────────────────────────────────────────
+
+const BASE_GEO = { geo_locations: { regions: [{ key: '3870' }] }, locales: [12], age_min: 25, age_max: 65 }
+
+// Cold audience
+const TARGETING_TRAFFIC = { ...BASE_GEO }
+
+// Website visitors custom audience (ID passed via CLI)
+function targetingRetarget(audienceId) {
+  return { ...BASE_GEO, custom_audiences: [{ id: audienceId }] }
+}
+
+// Full funnel — broadest, let Meta optimize (Advantage+ style)
+const TARGETING_FUNNEL = { ...BASE_GEO, age_min: 24, age_max: 66 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -232,15 +285,120 @@ function getCreatives(dir) {
     .sort()
 }
 
+// ─── Run one campaign ──────────────────────────────────────────────────────────
+
+async function runCampaign({ copy, targeting, objective, creatives, status, dailyBudgetCents, label }) {
+  const ADS_PER_ADSET = 50
+  const chunks = []
+  for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
+  const totalAdsets = chunks.length
+
+  log(`\n${'─'.repeat(51)}`)
+  log(`  ${label}`)
+  log(`${'─'.repeat(51)}`)
+
+  const campaign = await api('POST', `/act_${ACCOUNT_ID}/campaigns`, {
+    name: copy.campaign_name,
+    objective,
+    status,
+    special_ad_categories: '[]',
+    is_adset_budget_sharing_enabled: false,
+  })
+  log(`  ✓ Campaign: ${campaign.id}  "${copy.campaign_name}"`)
+
+  const adsetIds = []
+  const adResults = []
+
+  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+    const chunk = chunks[chunkIdx]
+    const adsetName = totalAdsets > 1
+      ? `${copy.adset_name} - Part ${chunkIdx + 1}`
+      : copy.adset_name
+
+    const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, {
+      name: adsetName,
+      campaign_id: campaign.id,
+      billing_event: 'IMPRESSIONS',
+      optimization_goal: 'LANDING_PAGE_VIEWS',
+      daily_budget: dailyBudgetCents,
+      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+      targeting,
+      status,
+    })
+    log(`  ✓ Ad Set:  ${adset.id}  "${adsetName}"`)
+    adsetIds.push(adset.id)
+
+    for (let j = 0; j < chunk.length; j++) {
+      const filePath = chunk[j]
+      const globalIdx = chunkIdx * ADS_PER_ADSET + j + 1
+      const adLabel = `${copy.campaign_name} - Creative ${globalIdx}`
+      const fileType = isVideo(filePath) ? 'video' : 'image'
+      log(`\n    [${globalIdx}/${creatives.length}] ${path.basename(filePath)} (${fileType})`)
+
+      let storySpec
+      if (isVideo(filePath)) {
+        const thumbPath = findThumbnail(filePath)
+        if (!thumbPath) {
+          throw new Error(
+            `No thumbnail found for ${path.basename(filePath)}.\n` +
+            `  Create: ${path.basename(filePath).replace(/\.(mp4|mov)$/i, '')}.jpg`
+          )
+        }
+        const videoId = await uploadVideo(filePath)
+        log(`      ✓ video_id  : ${videoId}`)
+        const thumbHash = await uploadImage(thumbPath)
+        log(`      ✓ thumbnail : ${thumbHash} (${path.basename(thumbPath)})`)
+        storySpec = {
+          page_id: PAGE_ID,
+          video_data: {
+            video_id: videoId,
+            image_hash: thumbHash,
+            message: copy.body,
+            title: copy.headline,
+            call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
+          },
+        }
+      } else {
+        const imageHash = await uploadImage(filePath)
+        log(`      ✓ image_hash: ${imageHash}`)
+        storySpec = {
+          page_id: PAGE_ID,
+          link_data: {
+            image_hash: imageHash,
+            link: copy.link_url,
+            message: copy.body,
+            name: copy.headline,
+            call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
+          },
+        }
+      }
+
+      const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
+        name: `${adLabel} Creative`,
+        object_story_spec: storySpec,
+      })
+      log(`      ✓ creative  : ${creative.id}`)
+
+      const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, {
+        name: adLabel,
+        adset_id: adset.id,
+        creative: { creative_id: creative.id },
+        status,
+      })
+      log(`      ✓ ad        : ${ad.id}`)
+
+      adResults.push({ file: path.basename(filePath), type: fileType, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id })
+    }
+  }
+
+  return { campaign, adsetIds, adResults }
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   if (!TOKEN && !DRY_RUN) {
     console.error('Error: META_ACCESS_TOKEN is not set.\n  $env:META_ACCESS_TOKEN = "your_token"')
-    process.exit(1)
-  }
-  if (!ACCOUNT_ID && !DRY_RUN) {
-    console.error('Error: META_AD_ACCOUNT_ID is not set.\n  $env:META_AD_ACCOUNT_ID = "2189765574795573"')
     process.exit(1)
   }
 
@@ -259,149 +417,77 @@ async function main() {
   const dailyBudget = parseFloat(args['daily-budget'] || '100')
   const dailyBudgetCents = Math.round(dailyBudget * 100)
   const status = args.status || 'PAUSED'
+  const retargetAudienceId = args['retarget-audience-id']
 
-  log(`\n═══════════════════════════════════════════════════`)
-  log(`  Zentax Campaign Launcher${DRY_RUN ? ' [DRY RUN]' : ''}`)
-  log(`═══════════════════════════════════════════════════`)
-  log(`  Account    : act_${ACCOUNT_ID}`)
-  log(`  Campaign   : ${COPY_FR.campaign_name}`)
-  log(`  Budget     : $${dailyBudget} CAD/day`)
-  log(`  Status     : ${status}`)
   const imgCount = creatives.filter(f => !isVideo(f)).length
   const vidCount = creatives.filter(f => isVideo(f)).length
-  log(`  Creatives  : ${creatives.length} total (${imgCount} image${imgCount !== 1 ? 's' : ''}, ${vidCount} video${vidCount !== 1 ? 's' : ''})`)
+
+  log(`\n${'═'.repeat(51)}`)
+  log(`  Zentax Campaign Launcher${DRY_RUN ? ' [DRY RUN]' : ''}`)
+  log(`${'═'.repeat(51)}`)
+  log(`  Account    : act_${ACCOUNT_ID}`)
+  log(`  Budget     : $${dailyBudget} CAD/day per ad set`)
+  log(`  Status     : ${status}`)
+  log(`  Creatives  : ${creatives.length} (${imgCount} image${imgCount !== 1 ? 's' : ''}, ${vidCount} video${vidCount !== 1 ? 's' : ''})`)
   creatives.forEach((c, i) => log(`    [${i + 1}] ${path.basename(c)} (${isVideo(c) ? 'video' : 'image'})`))
-  log(`═══════════════════════════════════════════════════`)
+  log(`  Campaigns  : Traffic + ${retargetAudienceId ? 'Retargeting + ' : '(no retarget audience provided) '}Full Funnel`)
+  log(`${'═'.repeat(51)}`)
 
-  // Step 1: Create Campaign
-  log('\n[1/3] Creating campaign...')
-  const campaign = await api('POST', `/act_${ACCOUNT_ID}/campaigns`, {
-    name: COPY_FR.campaign_name,
+  const allResults = []
+
+  // ── 1. Traffic (cold) ──
+  const traffic = await runCampaign({
+    label: '1/3  TRAFFIC — Cold Quebec/French audience',
+    copy: COPY_TRAFFIC,
+    targeting: TARGETING_TRAFFIC,
     objective: 'OUTCOME_TRAFFIC',
+    creatives,
     status,
-    special_ad_categories: '[]',
-    is_adset_budget_sharing_enabled: false,
+    dailyBudgetCents,
   })
-  log(`  ✓ Campaign ID: ${campaign.id}`)
+  allResults.push({ name: 'Traffic', ...traffic })
 
-  // Split creatives into chunks of 50 (Meta's per-ad-set limit)
-  const ADS_PER_ADSET = 50
-  const chunks = []
-  for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) {
-    chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
-  }
-  const totalAdsets = chunks.length
-  if (totalAdsets > 1) {
-    log(`\n  Note: ${creatives.length} creatives → split across ${totalAdsets} ad sets (max 50 ads each)`)
-  }
-
-  // Steps 2 & 3: one ad set per chunk
-  const adResults = []
-  const adsetIds = []
-
-  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-    const chunk = chunks[chunkIdx]
-    const adsetSuffix = totalAdsets > 1 ? ` (${chunkIdx + 1}/${totalAdsets})` : ''
-    const adsetName = totalAdsets > 1
-      ? `${COPY_FR.adset_name} - Part ${chunkIdx + 1}`
-      : COPY_FR.adset_name
-
-    log(`\n[${chunkIdx * 2 + 2}] Creating ad set${adsetSuffix}...`)
-    const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, {
-      name: adsetName,
-      campaign_id: campaign.id,
-      billing_event: 'IMPRESSIONS',
-      optimization_goal: 'LANDING_PAGE_VIEWS',
-      daily_budget: dailyBudgetCents,
-      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-      targeting: TARGETING_FR,
+  // ── 2. Retargeting ──
+  if (retargetAudienceId) {
+    const retarget = await runCampaign({
+      label: '2/3  RETARGETING — Website visitors',
+      copy: COPY_RETARGET,
+      targeting: targetingRetarget(retargetAudienceId),
+      objective: 'OUTCOME_TRAFFIC',
+      creatives,
       status,
+      dailyBudgetCents,
     })
-    log(`  ✓ Ad Set ID: ${adset.id}`)
-    adsetIds.push(adset.id)
-
-    log(`\n  Creating ${chunk.length} ads for this ad set...`)
-    for (let j = 0; j < chunk.length; j++) {
-      const filePath = chunk[j]
-      const globalIdx = chunkIdx * ADS_PER_ADSET + j + 1
-      const adLabel = `Zentax FR - Creative ${globalIdx}`
-      const fileType = isVideo(filePath) ? 'video' : 'image'
-      log(`\n  [${globalIdx}/${creatives.length}] ${path.basename(filePath)} (${fileType})`)
-
-      let storySpec
-      if (isVideo(filePath)) {
-        const thumbPath = findThumbnail(filePath)
-        if (!thumbPath) {
-          throw new Error(
-            `No thumbnail found for ${path.basename(filePath)}.\n` +
-            `  Create a matching image file: ${path.basename(filePath).replace(/\.(mp4|mov)$/i, '')}.jpg`
-          )
-        }
-        const videoId = await uploadVideo(filePath)
-        log(`    ✓ Uploaded  → video_id: ${videoId}`)
-        const thumbHash = await uploadImage(thumbPath)
-        log(`    ✓ Thumbnail → hash: ${thumbHash} (${path.basename(thumbPath)})`)
-        storySpec = {
-          page_id: PAGE_ID,
-          video_data: {
-            video_id: videoId,
-            image_hash: thumbHash,
-            message: COPY_FR.body,
-            title: COPY_FR.headline,
-            call_to_action: { type: 'LEARN_MORE', value: { link: COPY_FR.link_url } },
-          },
-        }
-      } else {
-        const imageHash = await uploadImage(filePath)
-        log(`    ✓ Uploaded  → hash: ${imageHash}`)
-        storySpec = {
-          page_id: PAGE_ID,
-          link_data: {
-            image_hash: imageHash,
-            link: COPY_FR.link_url,
-            message: COPY_FR.body,
-            name: COPY_FR.headline,
-            call_to_action: { type: 'LEARN_MORE', value: { link: COPY_FR.link_url } },
-          },
-        }
-      }
-
-      const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
-        name: `${adLabel} Creative`,
-        object_story_spec: storySpec,
-      })
-      log(`    ✓ Creative  → ID: ${creative.id}`)
-
-      const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, {
-        name: adLabel,
-        adset_id: adset.id,
-        creative: { creative_id: creative.id },
-        status,
-      })
-      log(`    ✓ Ad        → ID: ${ad.id}`)
-
-      adResults.push({ file: path.basename(filePath), type: fileType, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id })
-    }
+    allResults.push({ name: 'Retargeting', ...retarget })
+  } else {
+    log(`\n  ⚠  Skipping Retargeting campaign — pass --retarget-audience-id <id> to enable it.`)
   }
 
-  // Summary
-  log(`\n═══════════════════════════════════════════════════`)
-  log(`  Done!`)
-  log(`═══════════════════════════════════════════════════`)
-  log(`  Campaign ID : ${campaign.id}`)
-  log(`  Ad Sets     : ${adsetIds.length}`)
-  adsetIds.forEach((id, i) => log(`    [${i + 1}] ${id}`))
-  log(`  Ads created : ${adResults.length}`)
-  adResults.forEach((r, i) => {
-    log(`\n  [Ad ${i + 1}] ${r.file} (${r.type})`)
-    log(`    adset_id    : ${r.adset_id}`)
-    log(`    creative_id : ${r.creative_id}`)
-    log(`    ad_id       : ${r.ad_id}`)
+  // ── 3. Full Funnel ──
+  const funnel = await runCampaign({
+    label: `${retargetAudienceId ? '3' : '2'}/3  FULL FUNNEL — Conversion-focused, broader targeting`,
+    copy: COPY_FUNNEL,
+    targeting: TARGETING_FUNNEL,
+    objective: 'OUTCOME_LEADS',
+    creatives,
+    status,
+    dailyBudgetCents,
   })
-  log(`\n  All ads are PAUSED. Review in Meta Ads Manager,`)
-  log(`  then activate the ad set(s) when ready.`)
+  allResults.push({ name: 'Full Funnel', ...funnel })
+
+  // ── Summary ──
+  log(`\n${'═'.repeat(51)}`)
+  log(`  All done!`)
+  log(`${'═'.repeat(51)}`)
+  for (const r of allResults) {
+    log(`\n  [${r.name}] Campaign ID: ${r.campaign.id}`)
+    log(`    Ad sets (${r.adsetIds.length}): ${r.adsetIds.join(', ')}`)
+    log(`    Ads created: ${r.adResults.length}`)
+  }
+  log(`\n  All ads are ${status}. Review in Meta Ads Manager,`)
+  log(`  then activate when ready.`)
   log(`  https://adsmanager.facebook.com/`)
-  log(`═══════════════════════════════════════════════════\n`)
+  log(`${'═'.repeat(51)}\n`)
 }
 
 async function findTargeting() {
