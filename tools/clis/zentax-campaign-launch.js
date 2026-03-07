@@ -25,6 +25,8 @@
  *   --skip-traffic                Skip the Traffic campaign (useful if it already exists)
  *   --skip-retarget               Skip the Retargeting campaign
  *   --skip-funnel                 Skip the Full Funnel campaign
+ *   --rewarded-video <path>       9:16 video for Audience Network rewarded video placement
+ *                                 Without this, that placement is excluded automatically.
  *   --dry-run                     Preview all API calls without sending anything
  *   --find-targeting              Query Meta API for Quebec region key + French locale ID
  */
@@ -316,9 +318,39 @@ function getCreatives(dir) {
     .sort()
 }
 
+// Builds an asset_feed_spec that routes rwVideoId to Audience Network rewarded
+// video and uses the normal image/video for every other placement.
+function buildFeedSpec({ copy, videoId, thumbHash, imageHash, rwVideoId, rwThumbHash }) {
+  const main = { name: 'main' }
+  const rewarded = { name: 'rewarded' }
+  const spec = {
+    bodies: [{ text: copy.body, adlabels: [main] }],
+    titles: [{ text: copy.headline, adlabels: [main] }],
+    link_urls: [{ website_url: copy.link_url, adlabels: [main] }],
+    call_to_action_types: ['LEARN_MORE'],
+    videos: [{ video_id: rwVideoId, thumbnail_hash: rwThumbHash, adlabels: [rewarded] }],
+    asset_customization_rules: [{
+      customization_spec: {
+        publisher_platforms: ['audience_network'],
+        audience_network_positions: ['rewarded_video'],
+      },
+      video_label: rewarded,
+      title_label: main,
+      body_label: main,
+      link_url_label: main,
+    }],
+  }
+  if (videoId) {
+    spec.videos.unshift({ video_id: videoId, thumbnail_hash: thumbHash, adlabels: [main] })
+  } else {
+    spec.images = [{ hash: imageHash, adlabels: [main] }]
+  }
+  return spec
+}
+
 // ─── Run one campaign ──────────────────────────────────────────────────────────
 
-async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label, thumbnailFallbackDir, globalThumbnail }) {
+async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label, thumbnailFallbackDir, globalThumbnail, rewardedVideoPath }) {
   const ADS_PER_ADSET = 50
   const chunks = []
   for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
@@ -339,6 +371,20 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LAN
 
   const adsetIds = []
   const adResults = []
+
+  // Upload the 9:16 rewarded video once (shared across all ads in this campaign)
+  let rwVideoId = null
+  let rwThumbHash = null
+  if (rewardedVideoPath) {
+    log(`\n  Uploading rewarded video (9:16): ${path.basename(rewardedVideoPath)}`)
+    rwVideoId = await uploadVideo(rewardedVideoPath)
+    log(`    ✓ rewarded video_id: ${rwVideoId}`)
+    const rwThumbPath = findThumbnail(rewardedVideoPath, thumbnailFallbackDir, globalThumbnail)
+    if (rwThumbPath) {
+      rwThumbHash = await uploadImage(rwThumbPath)
+      log(`    ✓ rewarded thumb   : ${rwThumbHash} (${path.basename(rwThumbPath)})`)
+    }
+  }
 
   for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
     const chunk = chunks[chunkIdx]
@@ -366,7 +412,7 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LAN
       const fileType = isVideo(filePath) ? 'video' : 'image'
       log(`\n    [${globalIdx}/${creatives.length}] ${path.basename(filePath)} (${fileType})`)
 
-      let storySpec
+      let creativePayload
       if (isVideo(filePath)) {
         const thumbPath = findThumbnail(filePath, thumbnailFallbackDir, globalThumbnail)
         if (!thumbPath) {
@@ -380,37 +426,58 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LAN
         log(`      ✓ video_id  : ${videoId}`)
         const thumbHash = await uploadImage(thumbPath)
         log(`      ✓ thumbnail : ${thumbHash} (${path.basename(thumbPath)})`)
-        storySpec = {
-          page_id: PAGE_ID,
-          instagram_actor_id: INSTAGRAM_ACTOR_ID,
-          video_data: {
-            video_id: videoId,
-            image_hash: thumbHash,
-            message: copy.body,
-            title: copy.headline,
-            call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
-          },
+        if (rwVideoId) {
+          creativePayload = {
+            name: `${adLabel} Creative`,
+            page_id: PAGE_ID,
+            instagram_actor_id: INSTAGRAM_ACTOR_ID,
+            asset_feed_spec: buildFeedSpec({ copy, videoId, thumbHash, rwVideoId, rwThumbHash: rwThumbHash || thumbHash }),
+          }
+        } else {
+          creativePayload = {
+            name: `${adLabel} Creative`,
+            object_story_spec: {
+              page_id: PAGE_ID,
+              instagram_actor_id: INSTAGRAM_ACTOR_ID,
+              video_data: {
+                video_id: videoId,
+                image_hash: thumbHash,
+                message: copy.body,
+                title: copy.headline,
+                call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
+              },
+            },
+          }
         }
       } else {
         const imageHash = await uploadImage(filePath)
         log(`      ✓ image_hash: ${imageHash}`)
-        storySpec = {
-          page_id: PAGE_ID,
-          instagram_actor_id: INSTAGRAM_ACTOR_ID,
-          link_data: {
-            image_hash: imageHash,
-            link: copy.link_url,
-            message: copy.body,
-            name: copy.headline,
-            call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
-          },
+        if (rwVideoId) {
+          creativePayload = {
+            name: `${adLabel} Creative`,
+            page_id: PAGE_ID,
+            instagram_actor_id: INSTAGRAM_ACTOR_ID,
+            asset_feed_spec: buildFeedSpec({ copy, imageHash, rwVideoId, rwThumbHash }),
+          }
+        } else {
+          creativePayload = {
+            name: `${adLabel} Creative`,
+            object_story_spec: {
+              page_id: PAGE_ID,
+              instagram_actor_id: INSTAGRAM_ACTOR_ID,
+              link_data: {
+                image_hash: imageHash,
+                link: copy.link_url,
+                message: copy.body,
+                name: copy.headline,
+                call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
+              },
+            },
+          }
         }
       }
 
-      const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, {
-        name: `${adLabel} Creative`,
-        object_story_spec: storySpec,
-      })
+      const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, creativePayload)
       log(`      ✓ creative  : ${creative.id}`)
 
       const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, {
@@ -463,6 +530,11 @@ async function main() {
   const skipRetarget = !!args['skip-retarget']
   const skipFunnel   = !!args['skip-funnel']
   const globalThumbnail = args['thumbnail'] || null
+  const rewardedVideoPath = args['rewarded-video'] || null
+  if (rewardedVideoPath && !require('fs').existsSync(rewardedVideoPath)) {
+    console.error(`Error: --rewarded-video file not found: ${rewardedVideoPath}`)
+    process.exit(1)
+  }
 
   const imgCount = creatives.filter(f => !isVideo(f)).length
   const vidCount = creatives.filter(f => isVideo(f)).length
@@ -483,6 +555,7 @@ async function main() {
   log(`  Traffic/Funnel creatives : ${creatives.length} (${imgCount} img, ${vidCount} vid) — ${frDir}`)
   log(`  Retargeting creatives    : ${retargetCreatives.length} (${rImgCount} img, ${rVidCount} vid) — ${retargetDir}`)
   log(`  Campaigns  : ${planned.join(' + ') || '(none selected)'}`)
+  log(`  Rewarded video : ${rewardedVideoPath ? path.basename(rewardedVideoPath) : '(none — placement excluded)'}`)
   log(`${'═'.repeat(51)}`)
 
   const allResults = []
@@ -501,6 +574,7 @@ async function main() {
       dailyBudgetCents,
       thumbnailFallbackDir: retargetDir,
       globalThumbnail,
+      rewardedVideoPath,
     })
     allResults.push({ name: 'Traffic', ...traffic })
   } else {
@@ -521,6 +595,7 @@ async function main() {
         dailyBudgetCents,
         thumbnailFallbackDir: retargetDir,
         globalThumbnail,
+        rewardedVideoPath,
       })
       allResults.push({ name: 'Retargeting', ...retarget })
     } else {
@@ -543,6 +618,7 @@ async function main() {
       dailyBudgetCents,
       thumbnailFallbackDir: retargetDir,
       globalThumbnail,
+      rewardedVideoPath,
     })
     allResults.push({ name: 'Full Funnel', ...funnel })
   } else {
