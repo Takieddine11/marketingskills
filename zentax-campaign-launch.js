@@ -6,7 +6,7 @@ const RAW_ACCOUNT_ID = process.env.META_AD_ACCOUNT_ID || ''
 const ACCOUNT_ID = RAW_ACCOUNT_ID.replace(/^act_/, '') || '2189765574795573'
 const BASE_URL = 'https://graph.facebook.com/v22.0'
 const PAGE_ID = '676813882182100'
-const INSTAGRAM_ACTOR_ID = '9623717551054024'
+const INSTAGRAM_ACTOR_ID = '17841474054838963'
 const PIXEL_ID = '1173962951224451'
 const COPY_TRAFFIC = {
   headline: 'Ne voudriez-vous pas récupérer 10 heures par mois?',
