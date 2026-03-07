@@ -179,11 +179,11 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal, pixel
         log(`      ✓ video_id  : ${videoId}`)
         const thumbHash = await uploadImage(thumbPath)
         log(`      ✓ thumbnail : ${thumbHash} (${path.basename(thumbPath)})`)
-        storySpec = { page_id: PAGE_ID, instagram_actor_id: INSTAGRAM_ACTOR_ID, video_data: { video_id: videoId, image_hash: thumbHash, message: copy.body, title: copy.headline, call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } } } }
+        storySpec = { page_id: PAGE_ID, instagram_user_id: INSTAGRAM_ACTOR_ID, video_data: { video_id: videoId, image_hash: thumbHash, message: copy.body, title: copy.headline, call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } } } }
       } else {
         const imageHash = await uploadImage(filePath)
         log(`      ✓ image_hash: ${imageHash}`)
-        storySpec = { page_id: PAGE_ID, instagram_actor_id: INSTAGRAM_ACTOR_ID, link_data: { image_hash: imageHash, link: copy.link_url, message: copy.body, name: copy.headline, call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } } } }
+        storySpec = { page_id: PAGE_ID, instagram_user_id: INSTAGRAM_ACTOR_ID, link_data: { image_hash: imageHash, link: copy.link_url, message: copy.body, name: copy.headline, call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } } } }
       }
       const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, { name: `${adLabel} Creative`, object_story_spec: storySpec })
       log(`      ✓ creative  : ${creative.id}`)
