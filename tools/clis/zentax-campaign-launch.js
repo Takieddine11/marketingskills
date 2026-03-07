@@ -37,6 +37,7 @@ const RAW_ACCOUNT_ID = process.env.META_AD_ACCOUNT_ID || ''
 const ACCOUNT_ID = RAW_ACCOUNT_ID.replace(/^act_/, '') || '2189765574795573'
 const BASE_URL = 'https://graph.facebook.com/v18.0'
 const PAGE_ID = '676813882182100'
+const INSTAGRAM_ACTOR_ID = '9623717551054024'
 
 // ─── Ad Copy ──────────────────────────────────────────────────────────────────
 
@@ -381,6 +382,7 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LAN
         log(`      ✓ thumbnail : ${thumbHash} (${path.basename(thumbPath)})`)
         storySpec = {
           page_id: PAGE_ID,
+          instagram_actor_id: INSTAGRAM_ACTOR_ID,
           video_data: {
             video_id: videoId,
             image_hash: thumbHash,
@@ -394,6 +396,7 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LAN
         log(`      ✓ image_hash: ${imageHash}`)
         storySpec = {
           page_id: PAGE_ID,
+          instagram_actor_id: INSTAGRAM_ACTOR_ID,
           link_data: {
             image_hash: imageHash,
             link: copy.link_url,
