@@ -1,0 +1,175 @@
+================================================================================
+  ZENTAX META ADS — CAMPAIGN LAUNCH GUIDE
+================================================================================
+
+PREREQUISITES
+─────────────
+- Node.js 18+ installed
+- Script file: zentax-campaign-launch.js (keep it updated from the repo)
+- Meta access token (get a fresh one from Meta Business Suite if expired)
+- Your ad creatives ready (JPG, PNG, MP4, or MOV files)
+
+
+================================================================================
+  STEP 1 — OPEN POWERSHELL
+================================================================================
+
+Press Win + X → "Windows PowerShell" (or "Terminal")
+
+
+================================================================================
+  STEP 2 — SET YOUR CREDENTIALS
+================================================================================
+
+Run these two lines first (replace token if expired):
+
+  $env:META_ACCESS_TOKEN = "YOUR_TOKEN_HERE"
+  $env:META_AD_ACCOUNT_ID = "2189765574795573"
+
+  ⚠  NEVER share your token publicly or commit it to any file.
+     Tokens expire — if you get an auth error, get a new one from:
+     https://developers.facebook.com/tools/explorer/
+
+
+================================================================================
+  STEP 3 — PREPARE YOUR CREATIVES
+================================================================================
+
+Folder structure:
+  C:\Users\takie\Downloads\Creatives\        ← Traffic + Full Funnel images/videos
+  C:\Users\takie\Downloads\retargeting\      ← Retargeting images/videos (can be same folder)
+
+Rules:
+  - Supported formats: .jpg .jpeg .png .mp4 .mov
+  - If a video and image share the same filename (e.g. ad1.mp4 + ad1.jpg),
+    the image is treated as the video thumbnail and NOT uploaded as a separate ad.
+  - Videos MUST have a matching thumbnail image (same name, or any image in the folder).
+
+
+================================================================================
+  STEP 4 — RUN THE SCRIPT
+================================================================================
+
+STANDARD LAUNCH (all 3 campaigns, paused):
+──────────────────────────────────────────
+  node "C:\Users\takie\Downloads\zentax-campaign-launch.js" `
+    --fr-dir "C:\Users\takie\Downloads\Creatives" `
+    --retarget-dir "C:\Users\takie\Downloads\retargeting" `
+    --daily-budget 65 `
+    --retarget-audience-id YOUR_AUDIENCE_ID
+
+TRAFFIC + FULL FUNNEL ONLY (no retargeting):
+─────────────────────────────────────────────
+  node "C:\Users\takie\Downloads\zentax-campaign-launch.js" `
+    --fr-dir "C:\Users\takie\Downloads\Creatives" `
+    --daily-budget 65 `
+    --skip-retarget
+
+TRAFFIC ONLY:
+─────────────
+  node "C:\Users\takie\Downloads\zentax-campaign-launch.js" `
+    --fr-dir "C:\Users\takie\Downloads\Creatives" `
+    --daily-budget 65 `
+    --skip-retarget `
+    --skip-funnel
+
+DRY RUN (preview without creating anything in Meta):
+─────────────────────────────────────────────────────
+  node "C:\Users\takie\Downloads\zentax-campaign-launch.js" `
+    --fr-dir "C:\Users\takie\Downloads\Creatives" `
+    --daily-budget 65 `
+    --dry-run
+
+
+================================================================================
+  ALL AVAILABLE FLAGS
+================================================================================
+
+  --fr-dir <path>               REQUIRED. Folder with Traffic/Funnel creatives.
+  --retarget-dir <path>         Folder with Retargeting creatives (default: fr-dir).
+  --daily-budget <number>       Daily budget in CAD per ad set (default: 100).
+  --retarget-audience-id <id>   Custom audience ID for Retargeting campaign.
+  --status <PAUSED|ACTIVE>      Ad status on creation (default: PAUSED).
+  --thumbnail <path>            Global fallback thumbnail for all videos.
+  --skip-traffic                Skip the Traffic campaign.
+  --skip-retarget               Skip the Retargeting campaign.
+  --skip-funnel                 Skip the Full Funnel campaign.
+  --dry-run                     Preview all API calls without sending anything.
+  --find-targeting              Look up Quebec region + French locale keys from Meta.
+
+
+================================================================================
+  STEP 5 — REVIEW & ACTIVATE IN META ADS MANAGER
+================================================================================
+
+1. Go to: https://adsmanager.facebook.com/
+2. Find the newly created campaigns (they will be PAUSED).
+3. Review each ad — check creative, copy, targeting, budget.
+4. When satisfied, toggle campaigns to ACTIVE.
+
+
+================================================================================
+  CAMPAIGN DETAILS (current config)
+================================================================================
+
+  Pixel ID        : 1173962951224451  (Zentax Cabinet Comptable)
+  Page ID         : 676813882182100
+  Instagram ID    : 17841474054838963
+  Ad Account      : 2189765574795573
+  Target region   : Quebec (region key 535)
+  Language        : French (locale 44)
+  Min age         : 25 (Traffic/Retargeting), 24 (Full Funnel)
+  Destination URL : https://zentax.pro/funnel-2
+
+  Campaign 1 — Traffic
+    Objective    : OUTCOME_TRAFFIC
+    Optimization : LANDING_PAGE_VIEWS
+    Tracking     : Pixel tracking_specs (records website events)
+
+  Campaign 2 — Retargeting
+    Objective    : OUTCOME_LEADS
+    Optimization : OFFSITE_CONVERSIONS
+    Audience     : Custom audience (website visitors)
+    Tracking     : promoted_object + tracking_specs
+
+  Campaign 3 — Full Funnel
+    Objective    : OUTCOME_LEADS
+    Optimization : OFFSITE_CONVERSIONS
+    Tracking     : promoted_object + tracking_specs
+
+
+================================================================================
+  TROUBLESHOOTING
+================================================================================
+
+  "META_ACCESS_TOKEN is not set"
+    → Run the $env: lines again (they reset when PowerShell closes).
+
+  "Meta API: {...}" error with code 190
+    → Token expired. Get a new one from Meta Graph API Explorer.
+
+  "No thumbnail found for video.mp4"
+    → Add a .jpg or .png image to the same folder as the video.
+
+  "Directory not found"
+    → Check the path in --fr-dir. Use quotes if it contains spaces.
+
+  Ads created but not showing in Ads Manager
+    → Wait 1-2 minutes and refresh. Filter by "Paused" status.
+
+
+================================================================================
+  GETTING A NEW ACCESS TOKEN
+================================================================================
+
+1. Go to: https://developers.facebook.com/tools/explorer/
+2. Select your app and your ad account permissions:
+     ads_management, ads_read, business_management, pages_read_engagement
+3. Click "Generate Access Token"
+4. Copy the token and use it in Step 2 above.
+
+  ⚠  Standard tokens expire in ~1 hour.
+     For longer sessions, use a System User token from Meta Business Manager.
+
+
+================================================================================
