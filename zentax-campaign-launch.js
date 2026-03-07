@@ -131,7 +131,7 @@ function getCreatives(dir) {
     return true
   }).map(f => path.join(dir, f)).sort()
 }
-async function runCampaign({ copy, targeting, objective, optimizationGoal, pixelId, creatives, status, dailyBudgetCents, label, thumbnailFallbackDir, globalThumbnail }) {
+async function runCampaign({ copy, targeting, objective, optimizationGoal, pixelId, trackingPixelId, creatives, status, dailyBudgetCents, label, thumbnailFallbackDir, globalThumbnail }) {
   const ADS_PER_ADSET = 50
   const chunks = []
   for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
@@ -161,6 +161,10 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal, pixel
     }
     if (pixelId) {
       adsetBody.promoted_object = { pixel_id: pixelId, custom_event_type: 'LEAD' }
+    }
+    const effectiveTrackingPixel = trackingPixelId || pixelId
+    if (effectiveTrackingPixel) {
+      adsetBody.tracking_specs = [{ 'action.type': ['offsite_conversion'], fb_pixel: [effectiveTrackingPixel] }]
     }
     const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, adsetBody)
     log(`  ✓ Ad Set:  ${adset.id}  "${adsetName}"`)
@@ -220,7 +224,7 @@ async function main() {
   let step = 1
   const total = planned.length
   if (!skipTraffic) {
-    allResults.push({ name: 'Traffic', ...await runCampaign({ label: `${step++}/${total}  TRAFFIC — Cold Quebec/French audience`, copy: COPY_TRAFFIC, targeting: TARGETING_TRAFFIC, objective: 'OUTCOME_TRAFFIC', optimizationGoal: 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, thumbnailFallbackDir: retargetDir, globalThumbnail }) })
+    allResults.push({ name: 'Traffic', ...await runCampaign({ label: `${step++}/${total}  TRAFFIC — Cold Quebec/French audience`, copy: COPY_TRAFFIC, targeting: TARGETING_TRAFFIC, objective: 'OUTCOME_TRAFFIC', optimizationGoal: 'LANDING_PAGE_VIEWS', trackingPixelId: PIXEL_ID, creatives, status, dailyBudgetCents, thumbnailFallbackDir: retargetDir, globalThumbnail }) })
   } else log(`\n  ↷  Skipping Traffic campaign (--skip-traffic)`)
   if (!skipRetarget) {
     if (retargetAudienceId) {
