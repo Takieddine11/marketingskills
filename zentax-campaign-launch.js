@@ -191,7 +191,11 @@ async function runCampaign({ copy, targeting, objective, optimizationGoal, pixel
       }
       const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, { name: `${adLabel} Creative`, object_story_spec: storySpec })
       log(`      ✓ creative  : ${creative.id}`)
-      const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, { name: adLabel, adset_id: adset.id, creative: { creative_id: creative.id }, status })
+      const adBody = { name: adLabel, adset_id: adset.id, creative: { creative_id: creative.id }, status }
+      if (effectiveTrackingPixel) {
+        adBody.tracking_specs = [{ 'action.type': ['offsite_conversion'], fb_pixel: [effectiveTrackingPixel] }]
+      }
+      const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, adBody)
       log(`      ✓ ad        : ${ad.id}`)
       adResults.push({ file: path.basename(filePath), adset_id: adset.id, creative_id: creative.id, ad_id: ad.id })
     }
