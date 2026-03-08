@@ -257,7 +257,6 @@ const TARGETING_BROAD = {
   locales: [12],
   age_min: 25,
   age_max: 55,
-  targeting_automation: { advantage_audience: 1 }, // Advantage+ audience enabled for broad
 }
 
 function targetingRetarget(audienceId) {
@@ -267,7 +266,6 @@ function targetingRetarget(audienceId) {
     age_min: 25,
     age_max: 55,
     custom_audiences: [{ id: audienceId }],
-    targeting_automation: { advantage_audience: 0 }, // disabled — use specific custom audience
   }
 }
 
@@ -547,13 +545,14 @@ async function main() {
         : undefined
 
       const adSetBody = {
-        name:              adSetDef.ad_set_name,
-        campaign_id:       campaign.id,
-        billing_event:     'IMPRESSIONS',
-        optimization_goal: optimGoal,
-        daily_budget:      budgetCents,
-        bid_strategy:      'LOWEST_COST_WITHOUT_CAP',
+        name:                  adSetDef.ad_set_name,
+        campaign_id:           campaign.id,
+        billing_event:         'IMPRESSIONS',
+        optimization_goal:     optimGoal,
+        daily_budget:          budgetCents,
+        bid_strategy:          'LOWEST_COST_WITHOUT_CAP',
         targeting,
+        targeting_automation:  { advantage_audience: isRetargeting ? 0 : 1 },
         status,
       }
       if (promotedObject) adSetBody.promoted_object = promotedObject
