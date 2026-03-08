@@ -33,7 +33,7 @@ const path = require('path')
 
 const TOKEN        = process.env.META_ACCESS_TOKEN
 const ACCOUNT_ID   = (process.env.META_AD_ACCOUNT_ID || '2189765574795573').replace(/^act_/, '')
-const BASE_URL     = 'https://graph.facebook.com/v18.0'
+const BASE_URL     = 'https://graph.facebook.com/v22.0'
 const PAGE_ID      = '676813882182100'
 const IG_ACTOR_ID  = '9623717551054024'
 const PIXEL_ID     = '1173962951224451'   // Zentax Cabinet Comptable
@@ -257,6 +257,7 @@ const TARGETING_BROAD = {
   locales: [12],
   age_min: 25,
   age_max: 55,
+  targeting_automation: { advantage_audience: 1 },
 }
 
 function targetingRetarget(audienceId) {
@@ -266,6 +267,7 @@ function targetingRetarget(audienceId) {
     age_min: 25,
     age_max: 55,
     custom_audiences: [{ id: audienceId }],
+    targeting_automation: { advantage_audience: 0 },
   }
 }
 
@@ -552,7 +554,6 @@ async function main() {
         daily_budget:          budgetCents,
         bid_strategy:          'LOWEST_COST_WITHOUT_CAP',
         targeting,
-        targeting_automation:  { advantage_audience: isRetargeting ? 0 : 1 },
         status,
       }
       if (promotedObject) adSetBody.promoted_object = promotedObject
