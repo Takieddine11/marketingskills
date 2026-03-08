@@ -473,9 +473,23 @@ async function main() {
   const destUrl    = config.destination_url
   const campKeys   = Object.keys(config.campaigns)
 
+  // ── Folder structure ─────────────────────────────────────────────────────────
+  // Searches all three subfolders automatically — filenames in config are unique
+  const dirFinal   = path.join(frDir, 'Creative Final')
+  const dirRtg     = path.join(frDir, 'Retargeting')
+  const dirVideos  = path.join(frDir, 'Videos')
+  const searchDirs = [frDir, dirFinal, dirRtg, dirVideos].filter(d => fs.existsSync(d))
+
+  if (searchDirs.length === 1) {
+    log(`\n  ⚠  Only root folder found. Expected subfolders:`)
+    log(`       ${dirFinal}`)
+    log(`       ${dirRtg}`)
+    log(`       ${dirVideos}`)
+    log(`     Files will be searched in root only.\n`)
+  }
+
   // ── Retargeting audience (hardcoded default, overridable via flag) ───────────
-  let retargetAudienceId   = args['retarget-audience-id'] || RTG_AUDIENCE
-  let retargetAudienceName = `WCA-30D + Video Viewers 75% (${retargetAudienceId})`
+  const retargetAudienceId = args['retarget-audience-id'] || RTG_AUDIENCE
 
   // ── Print header ─────────────────────────────────────────────────────────────
   log(`\n${'═'.repeat(60)}`)
@@ -485,9 +499,12 @@ async function main() {
   log(`  Pixel      : ${PIXEL_ID}  (Zentax Cabinet Comptable)`)
   log(`  Status     : ${status}`)
   log(`  Creatives  : ${frDir}`)
+  log(`    ├ images : ${fs.existsSync(dirFinal)  ? '✓' : '✗'} Creative Final/`)
+  log(`    ├ retarget: ${fs.existsSync(dirRtg)   ? '✓' : '✗'} Retargeting/`)
+  log(`    └ videos : ${fs.existsSync(dirVideos) ? '✓' : '✗'} Videos/`)
   log(`  Destination: ${destUrl}`)
+  log(`  RTG Audience: ${retargetAudienceId}  (WCA-30D+VV75%)`)
   log(`  Campaigns  : ${campKeys.join(', ')}`)
-  if (retargetAudienceId) log(`  RTG Audience: ${retargetAudienceName} (${retargetAudienceId})`)
   log(`  Rewarded   : ${rewardedVidPath ? path.basename(rewardedVidPath) : '(none)'}`)
   log(`${'═'.repeat(60)}`)
 
@@ -552,19 +569,14 @@ async function main() {
         log(`    Uploading rewarded video: ${path.basename(rewardedVidPath)}`)
         rwVideoId = await uploadVideo(rewardedVidPath)
         log(`      ✓ rewarded video_id: ${rwVideoId}`)
-        const rwThumb = findThumbnail(rewardedVidPath, frDir, globalThumb)
+        const rwThumb = findThumbnail(rewardedVidPath, dirFinal, globalThumb)
         if (rwThumb) { rwThumbHash = await uploadImage(rwThumb); log(`      ✓ rewarded thumb  : ${rwThumbHash}`) }
       }
 
       const adResults = []
 
       for (const adDef of adSetDef.ads) {
-        const filePath = findCreativeFile(adDef.filename, [
-          frDir,
-          path.join(frDir, 'Videos'),
-          path.join(frDir, 'Images'),
-          path.join(frDir, 'Creatives'),
-        ])
+        const filePath = findCreativeFile(adDef.filename, searchDirs)
         if (!filePath) {
           if (DRY_RUN) { log(`\n    [DRY-RUN] ⚠  File not found: ${adDef.filename} — skipping`); continue }
           throw new Error(`Creative file not found: ${adDef.filename}\n  Searched in: ${frDir}`)
@@ -576,7 +588,7 @@ async function main() {
         let creativePayload
 
         if (isVideo(filePath)) {
-          const thumbPath = findThumbnail(filePath, frDir, globalThumb)
+          const thumbPath = findThumbnail(filePath, dirFinal, globalThumb)
           if (!thumbPath && !DRY_RUN) throw new Error(`No thumbnail for ${adDef.filename} — add ${adDef.filename.replace(/\.(mp4|mov)$/i, '')}.jpg next to it`)
           const videoId   = await uploadVideo(filePath);  log(`      ✓ video_id  : ${videoId}`)
           const thumbHash = thumbPath ? await uploadImage(thumbPath) : null
