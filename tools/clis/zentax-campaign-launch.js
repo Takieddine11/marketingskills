@@ -37,6 +37,7 @@ const BASE_URL     = 'https://graph.facebook.com/v18.0'
 const PAGE_ID      = '676813882182100'
 const IG_ACTOR_ID  = '9623717551054024'
 const PIXEL_ID     = '1173962951224451'   // Zentax Cabinet Comptable
+const RTG_AUDIENCE = '120242292904720693' // WCA-30D + Video Viewers 75%
 
 // ─── Embedded Campaign Config ─────────────────────────────────────────────────
 
@@ -472,23 +473,9 @@ async function main() {
   const destUrl    = config.destination_url
   const campKeys   = Object.keys(config.campaigns)
 
-  // ── Auto-discover retargeting audience ──────────────────────────────────────
-  let retargetAudienceId   = args['retarget-audience-id'] || null
-  let retargetAudienceName = retargetAudienceId ? '(from --retarget-audience-id flag)' : null
-  const hasRetargetCampaign = campKeys.some(k => /RETARGET|RTG/i.test(k))
-
-  if (hasRetargetCampaign && !retargetAudienceId) {
-    log(`\n  Searching for retargeting audience on act_${ACCOUNT_ID}...`)
-    const found = await findRetargetingAudience()
-    if (found) {
-      retargetAudienceId   = found.id
-      retargetAudienceName = found.name
-      log(`  ✓ Found: "${found.name}" (ID: ${found.id})`)
-    } else {
-      log(`  ⚠  No custom audience found — RETARGETING ad set will use broad targeting as fallback.`)
-      log(`     Create a custom audience in Meta Ads Manager, or pass --retarget-audience-id <id>`)
-    }
-  }
+  // ── Retargeting audience (hardcoded default, overridable via flag) ───────────
+  let retargetAudienceId   = args['retarget-audience-id'] || RTG_AUDIENCE
+  let retargetAudienceName = `WCA-30D + Video Viewers 75% (${retargetAudienceId})`
 
   // ── Print header ─────────────────────────────────────────────────────────────
   log(`\n${'═'.repeat(60)}`)
@@ -572,7 +559,12 @@ async function main() {
       const adResults = []
 
       for (const adDef of adSetDef.ads) {
-        const filePath = findCreativeFile(adDef.filename, [frDir])
+        const filePath = findCreativeFile(adDef.filename, [
+          frDir,
+          path.join(frDir, 'Videos'),
+          path.join(frDir, 'Images'),
+          path.join(frDir, 'Creatives'),
+        ])
         if (!filePath) {
           if (DRY_RUN) { log(`\n    [DRY-RUN] ⚠  File not found: ${adDef.filename} — skipping`); continue }
           throw new Error(`Creative file not found: ${adDef.filename}\n  Searched in: ${frDir}`)
