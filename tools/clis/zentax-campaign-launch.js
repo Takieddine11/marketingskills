@@ -257,6 +257,7 @@ const TARGETING_BROAD = {
   locales: [12],
   age_min: 25,
   age_max: 55,
+  targeting_automation: { advantage_audience: 1 }, // Advantage+ audience enabled for broad
 }
 
 function targetingRetarget(audienceId) {
@@ -266,6 +267,7 @@ function targetingRetarget(audienceId) {
     age_min: 25,
     age_max: 55,
     custom_audiences: [{ id: audienceId }],
+    targeting_automation: { advantage_audience: 0 }, // disabled — use specific custom audience
   }
 }
 
