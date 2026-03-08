@@ -42,121 +42,47 @@ const RTG_AUDIENCE = '120242292904720693' // WCA-30D + Video Viewers 75%
 // ─── Embedded Campaign Config ─────────────────────────────────────────────────
 
 const CAMPAIGN_CONFIG = {
-  destination_url: 'https://www.zentax.pro/funnel-2',
+  destination_url: 'https://www.zentax.ca',
   campaigns: {
-    ACQUISITION: {
-      campaign_name: 'ZTX | ACQ | QC-FR | 2026-03-10',
-      objective: 'LEAD_GENERATION',
-      budget_daily: 120,
+    VIDEO_ACQ: {
+      campaign_name: 'ZTX | ACQ | Video | Acquisition Entrepreneurs CA',
+      objective: 'OUTCOME_LEADS',
+      cbo: true,
+      budget_daily: 50,
       ad_sets: [
         {
-          ad_set_name: 'ZTX | ACQ | STATIC | BROAD-QC-FR',
-          budget_daily: 60,
+          ad_set_name: 'ZTX | ACQ | Video | Entrepreneurs FR | Canada',
           ads: [
             {
-              filename: 'ZTX_ACQ_FEAR_2h30-penalite.png',
-              ad_name: 'ZTX | FEAR | IMG | 2h30-penalite',
-              angle: 'FEAR',
-              format: 'IMAGE',
-              primary_text: 'Il est 2h30 du matin. Vous venez de recevoir un avis de pénalité du Revenu Québec.\n\nVotre comptable ne vous a pas prévenu. Les échéances sont passées. Les frais s\'accumulent.\n\nChez Zentax, votre équipe CPA surveille TOUTES vos échéances gouvernementales chaque mois — TPS/TVQ, impôt corporatif, Revenu Québec, ARC. Jamais en retard. Jamais de surprise.\n\nRéservez votre diagnostic comptable gratuit. Premier mois remboursé si vous n\'êtes pas satisfait.',
-              headline: 'Zéro pénalité. Zéro surprise en avril.',
-              description: 'Solution comptable complète à partir de 292$/mois.',
-              cta_button: 'LEARN_MORE',
+              filename: 'Videos/ZTX_ACQ_PRICE_price-angle.mp4',
+              ad_name: 'ZTX | ACQ | Video | Price Angle',
+              primary_text: 'Vos impôts, vos livres, vos déclarations T2/CO-17 — gérés chaque mois par des experts. Sans surprise, sans mauvaises nouvelles en fin d\'année.\n\nComptabilité mensuelle complète pour entrepreneurs canadiens. 292$/mois tout inclus.',
+              headline: 'Comptabilité complète à 292$/mois — Tout inclus.',
+              description: 'Réservez votre appel gratuit. Zéro engagement.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_ACQ_FEAR_comptable-en-retard.png',
-              ad_name: 'ZTX | FEAR | IMG | comptable-en-retard',
-              angle: 'FEAR',
-              format: 'IMAGE',
-              primary_text: 'Votre comptable est encore en retard. Les pénalités, elles, n\'attendent pas.\n\nChaque mois sans suivi comptable, c\'est des déductions manquées, des échéances oubliées et des surprises en avril que vous n\'aviez pas planifiées.\n\nZentax gère votre comptabilité complète chaque mois. TPS/TVQ. Tenue de livres. Impôt corporatif. QuickBooks inclus. Pour 292$/mois.\n\nRéservez votre diagnostic comptable gratuit.',
-              headline: 'Votre comptable en retard vous coûte cher.',
-              description: 'Comptabilité mensuelle complète. 292$/mois.',
-              cta_button: 'LEARN_MORE',
+              filename: 'Videos/ZTX_ACQ_SUIVI_rigueur-mensuel.mp4',
+              ad_name: 'ZTX | ACQ | Video | Suivi Mensuel Rigueur',
+              primary_text: 'Votre comptabilité ne devrait jamais être en retard. Chez Zentax, on gère vos livres, vos rapports financiers et vos déclarations fiscales — chaque mois, sans exception.\n\nDès 292$/mois. QuickBooks inclus.',
+              headline: 'Un suivi mensuel rigoureux. Sans retard, sans stress.',
+              description: 'Comptabilité, rapports financiers, T2/CO-17. Tout inclus à 292$/mois.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_ACQ_PRICE_stamp-292-tout-inclus.jpeg',
-              ad_name: 'ZTX | PRICE | IMG | stamp-292',
-              angle: 'PRICE',
-              format: 'IMAGE',
-              primary_text: 'Trop cher. Trop compliqué. Trop de tracas.\n\nC\'est ce que la majorité des entrepreneurs québécois ressentent avec leur comptabilité.\n\nZentax change ça. Tout inclus pour 292$/mois : tenue de livres mensuelle, TPS/TVQ, impôt corporatif, QuickBooks gratuit, rapports financiers et accès direct à votre CPA.\n\nZéro stress. Zéro surprise. Premier mois remboursé si vous n\'êtes pas satisfait.',
-              headline: 'Tout inclus. Zéro stress. 292$/mois.',
-              description: 'QuickBooks gratuit + comptabilité complète.',
-              cta_button: 'LEARN_MORE',
+              filename: 'Videos/ZTX_ACQ_SUIVI_suivi-mensuel.mp4',
+              ad_name: 'ZTX | ACQ | Video | Suivi Mensuel',
+              primary_text: 'Fini les nuits à courir après vos chiffres. Fini le stress avant les deadlines de l\'ARC.\n\nZentax gère votre comptabilité mensuelle complète pendant que vous vous concentrez sur votre business. Installation QuickBooks gratuite incluse.\n\nÀ partir de 292$/mois.',
+              headline: 'Votre comptabilité, on s\'en occupe. Chaque mois.',
+              description: 'Tenue de livres + Déclarations fiscales + Rapports. 292$/mois.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_ACQ_IDENTITY_entrepreneur-pas-comptable.jpeg',
-              ad_name: 'ZTX | IDENTITY | IMG | entrepreneur-pas-comptable',
-              angle: 'IDENTITY',
-              format: 'IMAGE',
-              primary_text: 'Vous avez lancé votre entreprise pour bâtir quelque chose. Pas pour passer vos soirées dans Excel.\n\nZentax installe QuickBooks gratuitement et gère votre comptabilité complète chaque mois. Tenue de livres. Déclarations fiscales. Rapports financiers.\n\nVous vous concentrez sur votre business. On s\'occupe des chiffres.\n\n292$/mois. Tout inclus.',
-              headline: 'Vous êtes entrepreneur. Pas comptable.',
-              description: 'QuickBooks installé gratuitement. 292$/mois.',
-              cta_button: 'LEARN_MORE',
-            },
-            {
-              filename: 'ZTX_ACQ_COMP_500-vs-zentax-photo.jpeg',
-              ad_name: 'ZTX | COMP | IMG | 500-photo',
-              angle: 'COMPARISON',
-              format: 'IMAGE',
-              primary_text: 'Votre comptable à 500$/an fait votre T2. C\'est tout.\n\nIl ne regarde pas vos livres chaque mois. Il ne repère pas les déductions manquées. Il ne vous prévient pas avant les échéances de Revenu Québec.\n\nRésultat : vous payez des milliers d\'impôts de trop et vous l\'apprenez en avril — quand il est trop tard.\n\nZentax gère tout, chaque mois. Proactivement. Pour 292$/mois.',
-              headline: 'Votre comptable à 500$/an vous coûte des milliers.',
-              description: 'Comptabilité mensuelle proactive. 292$/mois.',
-              cta_button: 'LEARN_MORE',
-            },
-            {
-              filename: 'ZTX_ACQ_COMP_500-vs-zentax-illus.jpeg',
-              ad_name: 'ZTX | COMP | IMG | 500-illus',
-              angle: 'COMPARISON',
-              format: 'IMAGE',
-              primary_text: 'Un comptable à 500$/an, ça semble économique. Jusqu\'à ce que vous réalisiez ce qu\'il ne fait pas.\n\nPas de suivi mensuel. Pas d\'optimisation fiscale. Pas de QuickBooks. Pas de rapport financier. Juste un T2 en avril — avec des milliers en déductions manquées.\n\nGarder votre argent est plus facile que d\'en gagner plus. Zentax s\'en charge. 292$/mois. Tout inclus.',
-              headline: 'Le comptable pas cher vous coûte des milliers.',
-              description: 'Solution proactive complète. 292$/mois.',
-              cta_button: 'LEARN_MORE',
-            },
-          ],
-        },
-        {
-          ad_set_name: 'ZTX | ACQ | VIDEO | BROAD-QC-FR',
-          budget_daily: 60,
-          ads: [
-            {
-              filename: 'ZTX_ACQ_PRICE_price-angle.mp4',
-              ad_name: 'ZTX | PRICE | VID | price-angle',
-              angle: 'PRICE',
-              format: 'VIDEO',
-              primary_text: 'Combien payez-vous vraiment pour votre comptabilité? Regardez ça.',
-              headline: '292$/mois. Tout inclus.',
-              description: 'Tenue de livres + taxes + QuickBooks gratuit.',
-              cta_button: 'LEARN_MORE',
-            },
-            {
-              filename: 'ZTX_ACQ_SUIVI_suivi-mensuel.mp4',
-              ad_name: 'ZTX | SUIVI | VID | suivi-mensuel',
-              angle: 'PROCESS',
-              format: 'VIDEO',
-              primary_text: 'Voici exactement ce qu\'on fait pour votre entreprise chaque mois. Tenue de livres, TPS/TVQ, rapport financier — tout est bouclé avant le 15. Vous recevez un résumé clair. Vous savez exactement où en sont vos finances.',
-              headline: 'Votre comptabilité faite. Chaque mois.',
-              description: 'Zéro retard. Zéro pénalité. 292$/mois.',
-              cta_button: 'LEARN_MORE',
-            },
-            {
-              filename: 'ZTX_ACQ_SUIVI_rigueur-mensuel.mp4',
-              ad_name: 'ZTX | RIGUEUR | VID | rigueur-mensuel',
-              angle: 'PROCESS',
-              format: 'VIDEO',
-              primary_text: 'La rigueur comptable qui protège votre entreprise — expliquée en 60 secondes. C\'est comme ça que Zentax s\'assure que vous ne payez jamais une pénalité inutile.',
-              headline: 'Rigueur et suivi. Mois après mois.',
-              description: 'Solution CPA complète. 292$/mois.',
-              cta_button: 'LEARN_MORE',
-            },
-            {
-              filename: 'ZTX_ACQ_UGC_barber-gestion-inc.mp4',
-              ad_name: 'ZTX | UGC | VID | barber',
-              angle: 'UGC',
-              format: 'VIDEO',
-              primary_text: 'Un entrepreneur québécois explique comment Zentax a changé la gestion de son INC. En vrai. Sans script.',
-              headline: 'Fini les tracas. Focus sur le business.',
-              description: 'Gestion complète de votre INC. 292$/mois.',
+              filename: 'Videos/ZTX_ACQ_UGC_barber-gestion-inc.mp4',
+              ad_name: 'ZTX | ACQ | Video | UGC Barber Gestion Inc',
+              primary_text: 'Lui aussi pensait que ça prenait un comptable traditionnel pour gérer son entreprise correctement.\n\nAujourd\'hui, sa comptabilité est à jour chaque mois — et il ne stresse plus jamais avant les déclarations fiscales.\n\n292$/mois. Tout inclus. Essayez Zentax.',
+              headline: 'Il a arrêté de stresser pour sa comptabilité. Vous aussi pouvez.',
+              description: 'Comptabilité intelligente pour entrepreneurs canadiens. Dès 292$/mois.',
               cta_button: 'LEARN_MORE',
             },
           ],
@@ -164,84 +90,132 @@ const CAMPAIGN_CONFIG = {
       ],
     },
 
-    RETARGETING: {
-      campaign_name: 'ZTX | RTG | QC-FR | 2026-03-10',
-      objective: 'LEAD_GENERATION',
-      budget_daily: 40,
+    IMAGE_ACQ: {
+      campaign_name: 'ZTX | ACQ | Image | Acquisition Entrepreneurs CA',
+      objective: 'OUTCOME_LEADS',
+      cbo: true,
+      budget_daily: 50,
       ad_sets: [
         {
-          ad_set_name: 'ZTX | RTG | ALL | WCA-30D+VV75',
-          budget_daily: 40,
+          ad_set_name: 'ZTX | ACQ | Image | Entrepreneurs FR | Canada',
           ads: [
             {
-              filename: 'ZTX_RTG_OBJECTION_vous-hesitez.jpeg',
-              ad_name: 'ZTX | RTG | IMG | vous-hesitez',
-              angle: 'OBJECTION',
-              format: 'IMAGE',
-              primary_text: 'Vous avez vu notre offre. Vous hésitez encore.\n\nVoici la vraie question : combien vous coûte chaque mois de plus sans comptabilité propre?\n\nDéductions manquées. Échéances ratées. Surprises en avril. Heures perdues à gérer vos livres.\n\nZentax règle tout ça. 292$/mois. Premier mois remboursé si vous n\'êtes pas satisfait.',
-              headline: 'Vous hésitez encore? Voici pourquoi agir maintenant.',
-              description: 'Premier mois remboursé si vous n\'êtes pas satisfait.',
-              cta_button: 'SIGN_UP',
+              filename: 'Creative Final/ZTX_ACQ_COMP_500-vs-zentax-illus.jpeg',
+              ad_name: 'ZTX | ACQ | Image | Comparison Illustration',
+              primary_text: 'Votre comptable à 500$ vous semble économique. Mais les déductions manquées et la mauvaise structure vous coûtent des milliers chaque année.\n\nGarder votre argent est plus simple que d\'en gagner davantage.\n\nZentax : comptabilité intelligente, structure optimisée. 292$/mois.',
+              headline: 'Votre comptable à 500$ vous coûte des milliers en déductions.',
+              description: 'Zentax vs le comptable classique — la différence se voit dans vos profits.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_RTG_ENCORE_vous-y-pensez-encore.jpeg',
-              ad_name: 'ZTX | RTG | IMG | vous-y-pensez-encore',
-              angle: 'URGENCY',
-              format: 'IMAGE',
-              primary_text: 'Vous y pensez encore. C\'est bon signe — ça veut dire que vous savez que votre comptabilité a besoin d\'attention.\n\nNe laissez pas la prochaine échéance de Revenu Québec vous rappeler pourquoi vous y pensiez.\n\nRéservez votre diagnostic maintenant. 15 minutes suffisent.',
-              headline: 'Vous y pensez encore? Agissez avant avril.',
-              description: 'Libérez-vous de la paperasse. 292$/mois.',
-              cta_button: 'SIGN_UP',
+              filename: 'Creative Final/ZTX_ACQ_COMP_500-vs-zentax-photo.jpeg',
+              ad_name: 'ZTX | ACQ | Image | Comparison Photo',
+              primary_text: 'Un comptable pas cher à 500$ vous coûte des milliers en déductions manquées.\n\nEt une mauvaise structure fiscale peut vous coûter encore plus. Garder votre argent, c\'est plus facile que d\'en gagner davantage.\n\nZentax Smart Accounting — 292$/mois. Comptabilité complète pour entrepreneurs canadiens.',
+              headline: 'Le comptable pas cher vous coûte plus cher qu\'il n\'en a l\'air.',
+              description: 'Zentax : comptabilité intelligente à 292$/mois. Réservez un appel gratuit.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_RTG_CLICK_vous-avez-clique.jpeg',
-              ad_name: 'ZTX | RTG | IMG | vous-avez-clique',
-              angle: 'URGENCY',
-              format: 'IMAGE',
-              primary_text: 'Vous avez cliqué sur notre annonce. Vous avez vu l\'offre. Quelque chose vous a parlé.\n\nNe laissez pas vos finances en suspens plus longtemps.\n\nVos concurrents qui ont déjà mis leur comptabilité en ordre ont un avantage sur vous chaque mois. Chaque mois d\'attente, c\'est des déductions qui disparaissent.',
-              headline: 'Vous avez cliqué. Ne laissez pas ça en suspens.',
-              description: 'Diagnostic comptable gratuit. 292$/mois.',
-              cta_button: 'SIGN_UP',
+              filename: 'Creative Final/ZTX_ACQ_FEAR_2h30-penalite.png',
+              ad_name: 'ZTX | ACQ | Image | Fear 2h30 Pénalité',
+              primary_text: 'Il est 2h30 du matin et vous êtes encore en train de stresser à cause de votre comptabilité ?\n\nVotre comptable est *encore* en retard. Et les pénalités, elles, n\'attendent pas.\n\nArrêtez de stresser. Zentax gère votre comptabilité et vos impôts chaque mois — à temps, sans exception. 292$/mois tout inclus.',
+              headline: 'Votre comptable est encore en retard ? Les pénalités, elles, sont à l\'heure.',
+              description: 'Comptabilité et impôts complets pour 292$/mois. Réservez maintenant.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_RTG_ALMOST_vous-y-etes-presque.jpeg',
-              ad_name: 'ZTX | RTG | IMG | vous-y-etes-presque',
-              angle: 'CLOSE',
-              format: 'IMAGE',
-              primary_text: 'Vous êtes à deux clics d\'une comptabilité enfin réglée.\n\n✓ Tenue de livres mensuelle\n✓ TPS/TVQ\n✓ Impôt corporatif\n✓ QuickBooks gratuit\n✓ Rapports financiers\n\nTout ça pour 292$/mois. Réservez votre diagnostic gratuit — 30 minutes pour clarifier votre situation financière.',
-              headline: 'Vous y êtes presque. Plus qu\'un appel.',
-              description: 'Diagnostic comptable gratuit. Pas d\'engagement.',
-              cta_button: 'SIGN_UP',
+              filename: 'Creative Final/ZTX_ACQ_FEAR_comptable-en-retard.png',
+              ad_name: 'ZTX | ACQ | Image | Fear Comptable En Retard ARC',
+              primary_text: 'L\'ARC et Revenu Québec n\'attendent pas. Pendant que votre comptable prend du retard, les amendes, elles, sont déjà en route.\n\nNe risquez plus jamais d\'amendes coûteuses. Zentax gère votre comptabilité et vos impôts d\'entreprise à temps, chaque mois.\n\nDès 292$/mois.',
+              headline: 'Pénalités imminentes. Votre comptable est toujours en retard.',
+              description: 'Zentax : comptabilité et impôts gérés à temps, chaque mois. 292$/mois.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_RTG_SEEN_vous-avez-vu-zentax.jpeg',
-              ad_name: 'ZTX | RTG | IMG | vous-avez-vu-zentax',
-              angle: 'REMINDER',
-              format: 'IMAGE',
-              primary_text: 'Vous avez déjà vu Zentax. Vous savez ce qu\'on offre.\n\nChaque semaine d\'attente, c\'est une semaine de plus avec des livres en désordre et des risques de pénalités inutiles.\n\nNos clients disent que leur seul regret, c\'est de ne pas avoir fait le changement plus tôt.',
-              headline: 'Ne laissez pas votre comptabilité vous ralentir.',
-              description: '292$/mois. Premier mois remboursé.',
-              cta_button: 'SIGN_UP',
+              filename: 'Creative Final/ZTX_ACQ_IDENTITY_entrepreneur-pas-comptable.jpeg',
+              ad_name: 'ZTX | ACQ | Image | Identity Entrepreneur Pas Comptable',
+              primary_text: 'Vous avez lancé votre entreprise pour bâtir quelque chose de grand — pas pour passer vos soirées sur des chiffres.\n\nVous êtes entrepreneur. Pas comptable.\n\nZentax gère vos livres, vos impôts et vos finances. Pendant que vous, vous gérez votre business.\n\n✅ Installation QuickBooks GRATUITE incluse\n✅ À partir de 292$/mois',
+              headline: 'Vous êtes entrepreneur. Pas comptable.',
+              description: 'Zentax gère vos livres, impôts et finances. QuickBooks inclus. 292$/mois.',
+              cta_button: 'LEARN_MORE',
             },
             {
-              filename: 'ZTX_RTG_TESTI_mohamed-halaimia.jpeg',
-              ad_name: 'ZTX | RTG | IMG | testi-mohamed',
-              angle: 'TESTIMONIAL',
-              format: 'IMAGE',
-              primary_text: 'Mohamed Halaimia a fait confiance à Zentax pour la comptabilité mensuelle de son entreprise.\n\nRésultat : des livres propres, des chiffres clairs, et plus jamais de surprises fiscales.\n\nDes centaines d\'entrepreneurs québécois ont fait le même choix. C\'est votre tour.',
-              headline: 'Ils ont sauté le pas. Vous aussi?',
-              description: '4.9 ⭐ sur Google. 292$/mois. Tout inclus.',
-              cta_button: 'SIGN_UP',
+              filename: 'Creative Final/ZTX_ACQ_PRICE_stamp-292-tout-inclus.jpeg',
+              ad_name: 'ZTX | ACQ | Image | Price 292 Tout Inclus',
+              primary_text: 'Vous pensez que la comptabilité d\'entreprise c\'est « trop cher » ou « trop compliqué » ?\n\nZentax : Tout inclus. Zéro stress. 292$/mois.\n\nComptabilité, tenue de livres, impôts sociétés — pour entrepreneurs canadiens. Un prix fixe, zéro mauvaise surprise.',
+              headline: 'Tout inclus. Zéro stress. 292$/mois.',
+              description: 'Comptabilité complète pour entrepreneurs canadiens. Réservez un appel gratuit.',
+              cta_button: 'CONTACT_US',
+            },
+          ],
+        },
+      ],
+    },
+
+    RETARGETING: {
+      campaign_name: 'ZTX | RTG | Visiteurs Site Web | Conversion',
+      objective: 'OUTCOME_LEADS',
+      cbo: true,
+      budget_daily: 30,
+      ad_sets: [
+        {
+          ad_set_name: 'ZTX | RTG | Visiteurs Site Web 30 jours',
+          ads: [
+            {
+              filename: 'Retargeting/ZTX_RTG_ALMOST_vous-y-etes-presque.jpeg',
+              ad_name: 'ZTX | RTG | Image | Vous y êtes presque (FOMO)',
+              primary_text: 'Vous y êtes presque. Ne laissez pas la paperasse vous freiner encore.\n\n« Zentax a simplifié notre comptabilité et nous a fait gagner des heures chaque mois. » — Ali Mounir, Entrepreneur en construction\n\n✅ Tenue de livres\n✅ Rapports financiers\n✅ Déclarations fiscales (T2/CO-17)\n\n292$/mois. Un appel suffit pour tout mettre en place.',
+              headline: 'Vous y êtes presque. Ne laissez pas la paperasse vous freiner.',
+              description: 'Comptabilité mensuelle complète à 292$/mois. Réservez maintenant.',
+              cta_button: 'CONTACT_US',
             },
             {
-              filename: 'ZTX_RTG_TESTI_video-testimonials.mp4',
-              ad_name: 'ZTX | RTG | VID | testimonials',
-              angle: 'TESTIMONIAL',
-              format: 'VIDEO',
-              primary_text: 'Voici ce que nos clients disent après quelques mois avec Zentax. En vrai.',
-              headline: 'Ils ont arrêté de stresser. Vous le méritez aussi.',
-              description: 'Diagnostic comptable gratuit. 292$/mois.',
-              cta_button: 'SIGN_UP',
+              filename: 'Retargeting/ZTX_RTG_CLICK_vous-avez-clique.jpeg',
+              ad_name: 'ZTX | RTG | Image | Vous avez cliqué (Urgence douce)',
+              primary_text: 'Vous avez cliqué — c\'est souvent le signe qu\'il est temps d\'agir.\n\nNe laissez pas vos finances en suspens plus longtemps.\n\nZentax Smart Accounting : comptabilité et impôts sans stress pour entrepreneurs canadiens.\n\n✔ Tenue de livres ✔ T2/CO-17 ✔ Rapports financiers\n\nSeulement 292$/mois. Rejoignez des centaines d\'entrepreneurs qui ont franchi le pas.',
+              headline: 'Vous avez cliqué. Ne laissez pas vos finances en suspens !',
+              description: '292$/mois tout inclus — Tenue de livres, T2/CO-17, rapports.',
+              cta_button: 'CONTACT_US',
+            },
+            {
+              filename: 'Retargeting/ZTX_RTG_ENCORE_vous-y-pensez-encore.jpeg',
+              ad_name: 'ZTX | RTG | Image | Vous y pensez encore (Rumination)',
+              primary_text: 'Vous y pensez encore. C\'est normal — changer de comptable ou en prendre un pour la première fois, ça mérite réflexion.\n\nMais pendant ce temps, vos livres s\'accumulent.\n\n« Zentax a simplifié notre comptabilité et nous a fait gagner des heures chaque mois. » — Ali Mounir, Entrepreneur en construction\n\nComptabilité et impôts gérés pour 292$/mois. Prenez rendez-vous — c\'est gratuit et sans engagement.',
+              headline: 'Vous y pensez encore ? Libérez-vous de la paperasse.',
+              description: 'Un appel gratuit, sans engagement. On répond à toutes vos questions.',
+              cta_button: 'CONTACT_US',
+            },
+            {
+              filename: 'Retargeting/ZTX_RTG_OBJECTION_vous-hesitez.jpeg',
+              ad_name: 'ZTX | RTG | Image | Vous hésitez (Objection Handler)',
+              primary_text: 'Vous avez vu notre offre. Vous hésitez encore. Voici pourquoi nos clients ne regrettent jamais :\n\n✅ Prix fixe — 292$/mois, aucune surprise\n✅ Tout inclus — tenue de livres, déclarations T2/CO-17, rapports\n✅ Réactifs — votre dossier est traité à temps, chaque mois\n✅ QuickBooks inclus — installation gratuite\n\n« Zentax a simplifié notre comptabilité et nous a fait gagner des heures chaque mois. » — Ali Mounir\n\nNe laissez pas la paperasse ralentir votre croissance.',
+              headline: 'Vous hésitez encore ? On répond à toutes vos questions.',
+              description: 'Comptabilité claire et sans stress à 292$/mois. Réservez un appel gratuit.',
+              cta_button: 'CONTACT_US',
+            },
+            {
+              filename: 'Retargeting/ZTX_RTG_SEEN_vous-avez-vu-zentax.jpeg',
+              ad_name: 'ZTX | RTG | Image | Vous avez vu Zentax (Rappel de marque)',
+              primary_text: 'Vous avez déjà vu Zentax. Voici pourquoi des centaines d\'entrepreneurs canadiens nous ont choisi :\n\n→ Simplifiez vos finances\n→ Évitez les erreurs fiscales\n→ Gagnez des heures chaque mois\n\n« Zentax a simplifié notre comptabilité et nous a fait gagner des heures chaque mois. » — Ali Mounir, Entrepreneur en construction\n\nÀ partir de 292$/mois. Ne laissez plus votre comptabilité vous ralentir.',
+              headline: 'Vous avez vu Zentax. Ne laissez pas votre comptabilité vous ralentir.',
+              description: 'À partir de 292$/mois. Réservez votre appel gratuit maintenant.',
+              cta_button: 'CONTACT_US',
+            },
+            {
+              filename: 'Retargeting/ZTX_RTG_TESTI_mohamed-halaimia.jpeg',
+              ad_name: 'ZTX | RTG | Image | Testimonial Mohamed Halaimia (TI)',
+              primary_text: 'Vous avez déjà fait le premier pas. Il est temps de le franchir.\n\n« Zentax a simplifié notre tenue de livres et nous a fait gagner des heures chaque mois. »\n— Mohamed Halaimia, Entrepreneur en TI\n\nComptabilité mensuelle tout-en-un pour entrepreneurs. 292$/mois.\n\nArrêtez de perdre du temps sur votre comptabilité.',
+              headline: 'Arrêtez de perdre du temps sur votre comptabilité.',
+              description: 'Rejoignez Mohamed et des centaines d\'entrepreneurs. 292$/mois.',
+              cta_button: 'CONTACT_US',
+            },
+            {
+              filename: 'Retargeting/ZTX_RTG_TESTI_video-testimonials.mp4',
+              ad_name: 'ZTX | RTG | Video | Testimonial Vidéo Multi-Clients',
+              primary_text: 'Vous avez visité Zentax. Voici ce que pensent nos clients — en leurs propres mots.\n\nDes entrepreneurs canadiens comme vous ont confié leur comptabilité à Zentax et ne regardent plus jamais en arrière.\n\n292$/mois tout inclus — comptabilité, impôts, rapports.\n\nVotre tour ?',
+              headline: 'Ils ont fait confiance à Zentax. Voici ce qu\'ils en pensent.',
+              description: '292$/mois tout inclus. Réservez votre appel gratuit — sans engagement.',
+              cta_button: 'CONTACT_US',
             },
           ],
         },
@@ -253,7 +227,7 @@ const CAMPAIGN_CONFIG = {
 // ─── Targeting (Quebec, French, 25-55) ───────────────────────────────────────
 
 const TARGETING_BROAD = {
-  geo_locations: { regions: [{ key: '3870' }] },
+  geo_locations: { countries: ['CA'] },
   locales: [12],
   age_min: 25,
   age_max: 55,
@@ -262,8 +236,7 @@ const TARGETING_BROAD = {
 
 function targetingRetarget(audienceId) {
   return {
-    geo_locations: { regions: [{ key: '3870' }] },
-    locales: [12],
+    geo_locations: { countries: ['CA'] },
     age_min: 25,
     age_max: 55,
     custom_audiences: [{ id: audienceId }],
@@ -524,20 +497,23 @@ async function main() {
     log(`  Total budget: $${campDef.budget_daily} CAD/day  |  Ad sets: ${campDef.ad_sets.length}`)
     log(`${'─'.repeat(60)}`)
 
-    const campaign = await api('POST', `/act_${ACCOUNT_ID}/campaigns`, {
-      name:                            campDef.campaign_name,
-      objective:                       metaObjective,
+    const campaignBody = {
+      name:                  campDef.campaign_name,
+      objective:             metaObjective,
       status,
-      special_ad_categories:           '[]',
-      is_adset_budget_sharing_enabled: false,
-    })
+      special_ad_categories: '[]',
+    }
+    if (campDef.cbo) {
+      campaignBody.daily_budget  = Math.round(campDef.budget_daily * 100)
+      campaignBody.bid_strategy  = 'LOWEST_COST_WITHOUT_CAP'
+    }
+    const campaign = await api('POST', `/act_${ACCOUNT_ID}/campaigns`, campaignBody)
     log(`  ✓ Campaign: ${campaign.id}  "${campDef.campaign_name}"`)
 
     const adSetResults = []
 
     for (const adSetDef of campDef.ad_sets) {
-      const budgetCents = Math.round(adSetDef.budget_daily * 100)
-      const targeting   = (isRetargeting && retargetAudienceId)
+      const targeting = (isRetargeting && retargetAudienceId)
         ? targetingRetarget(retargetAudienceId)
         : TARGETING_BROAD
 
@@ -547,19 +523,23 @@ async function main() {
         : undefined
 
       const adSetBody = {
-        name:                  adSetDef.ad_set_name,
-        campaign_id:           campaign.id,
-        billing_event:         'IMPRESSIONS',
-        optimization_goal:     optimGoal,
-        daily_budget:          budgetCents,
-        bid_strategy:          'LOWEST_COST_WITHOUT_CAP',
+        name:              adSetDef.ad_set_name,
+        campaign_id:       campaign.id,
+        billing_event:     'IMPRESSIONS',
+        optimization_goal: optimGoal,
+        bid_strategy:      'LOWEST_COST_WITHOUT_CAP',
         targeting,
         status,
+      }
+      // CBO campaigns manage budget at the campaign level — no adset budget needed
+      if (!campDef.cbo && adSetDef.budget_daily) {
+        adSetBody.daily_budget = Math.round(adSetDef.budget_daily * 100)
       }
       if (promotedObject) adSetBody.promoted_object = promotedObject
 
       const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, adSetBody)
-      log(`\n  ✓ Ad Set: ${adset.id}  "${adSetDef.ad_set_name}"  ($${adSetDef.budget_daily}/day)`)
+      const budgetLabel = campDef.cbo ? 'CBO' : `$${adSetDef.budget_daily}/day`
+      log(`\n  ✓ Ad Set: ${adset.id}  "${adSetDef.ad_set_name}"  (${budgetLabel})`)
 
       if (isRetargeting && !retargetAudienceId) {
         log(`    ⚠  Using broad targeting (no custom audience found)`)
