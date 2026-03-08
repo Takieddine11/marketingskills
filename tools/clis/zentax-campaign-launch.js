@@ -1,30 +1,26 @@
 #!/usr/bin/env node
 /**
  * Zentax Campaign Launcher
- * Creates three French (Quebec) Meta Ads campaigns:
- *   1. Traffic      — cold Quebec/French audience
- *   2. Retargeting  — website visitors (requires --retarget-audience-id)
- *   3. Full Funnel  — conversion-focused, broader targeting
+ * JSON-config driven Meta Ads campaign creator.
+ * Creates campaigns, ad sets, and individual ads from a config file,
+ * each with its own copy (primary_text, headline, description, CTA).
  *
  * Usage (PowerShell):
- *   $env:META_ACCESS_TOKEN = "your_token"
+ *   $env:META_ACCESS_TOKEN  = Get-Content "$env:USERPROFILE\meta_token.txt"
  *   $env:META_AD_ACCOUNT_ID = "2189765574795573"
  *
  *   # Dry run — safe preview, no API calls:
- *   node zentax-campaign-launch.js --dry-run --fr-dir "C:\Users\takie\Downloads\Creatives"
+ *   node zentax-campaign-launch.js --config campaign.json --fr-dir "C:\Users\takie\Downloads\Creatives" --dry-run
  *
- *   # Launch all three campaigns:
- *   node zentax-campaign-launch.js --fr-dir "C:\Users\takie\Downloads\Creatives" --daily-budget 65 --retarget-audience-id 123456789
+ *   # Launch all campaigns from config:
+ *   node zentax-campaign-launch.js --config campaign.json --fr-dir "C:\Users\takie\Downloads\Creatives" --retarget-audience-id 123456789
  *
  * Options:
- *   --fr-dir <path>               Folder of Traffic + Full Funnel creatives (.jpg/.png/.mp4/.mov)
- *   --retarget-dir <path>         Folder of Retargeting creatives (defaults to --fr-dir if omitted)
- *   --daily-budget <num>          Daily budget in CAD per ad set (default: 100)
+ *   --config <path>               JSON campaign config file (required)
+ *   --fr-dir <path>               Folder containing all creative files (required)
+ *   --retarget-dir <path>         Separate folder for retargeting creatives (defaults to --fr-dir)
+ *   --retarget-audience-id <id>   Meta custom audience ID for RETARGETING campaign ad sets
  *   --status <status>             PAUSED or ACTIVE (default: PAUSED)
- *   --retarget-audience-id <id>   Meta custom audience ID for website visitors
- *   --skip-traffic                Skip the Traffic campaign (useful if it already exists)
- *   --skip-retarget               Skip the Retargeting campaign
- *   --skip-funnel                 Skip the Full Funnel campaign
  *   --rewarded-video <path>       9:16 video for Audience Network rewarded video placement
  *                                 Without this, that placement is excluded automatically.
  *   --dry-run                     Preview all API calls without sending anything
@@ -41,112 +37,41 @@ const BASE_URL = 'https://graph.facebook.com/v18.0'
 const PAGE_ID = '676813882182100'
 const INSTAGRAM_ACTOR_ID = '9623717551054024'
 
-// ─── Ad Copy ──────────────────────────────────────────────────────────────────
-
-// 1. Traffic (cold audience)
-const COPY_TRAFFIC = {
-  headline: 'Ne voudriez-vous pas récupérer 10 heures par mois?',
-  body: `Si vous êtes entrepreneur ou propriétaire d'une petite entreprise, vous faites peut-être face à un problème.
-
-Vos livres sont en désordre et vous passez trop de temps à essayer de les gérer.
-
-Vous manquez peut-être des délais de production, vous ignorez vos marges bénéficiaires et vous vivez avec la crainte de faire des erreurs menant à des vérifications et pénalités gouvernementales.
-
-Saviez-vous que de nombreuses entreprises échouent à cause d'une mauvaise gestion financière?
-
-Ce n'est pas juste une question de chiffres — c'est le stress, l'inquiétude et l'incertitude sur la situation financière réelle de votre entreprise.
-
-Imaginez un propriétaire comme vous : une belle opération, mais toujours en retard sur sa comptabilité. Des échéances fiscales manquées, des marges inconnues. Un stress constant.
-
-Vous pensez peut-être qu'engager un comptable à temps plein est la solution. Mais c'est coûteux et pas toujours adapté aux PME.
-
-Il semble parfois qu'il n'y ait pas de bonne solution. Comme si vous étiez pris dans un cycle de confusion financière.
-
-Mais ce n'est pas le cas.
-
-Voici la Fondation à 3 Piliers — un système conçu pour les petites entreprises.
-
-Il vous offre de la visibilité, assure votre conformité et vous remet aux commandes de vos finances. Et le meilleur? C'est fait pour vous.
-
-Avec notre système, vous pouvez :
-- Maintenir des livres propres et organisés
-- Respecter chaque échéance
-- Savoir exactement où se situe votre entreprise financièrement
-- Être soutenu par une équipe de CPA de confiance
-
-Réservez dès maintenant une consultation stratégique gratuite de 30 minutes — sans engagement.
-
-👉 zentax.pro/funnel-2
-
-Si ce n'est pas pour vous, pas de problème. Mais si vous ne faites rien, la confusion financière continue.
-
-Votre entreprise le mérite. Agissez maintenant.
-
-👉 zentax.pro/funnel-2`,
-  link_url: 'https://zentax.pro/funnel-2',
-  campaign_name: 'Zentax - Trafic QC FR',
-  adset_name: 'Entrepreneurs QC FR - Trafic',
-}
-
-// 2. Retargeting (warm — website visitors)
-const COPY_RETARGET = {
-  headline: 'Encore là? Votre consultation gratuite vous attend.',
-  body: `Vous avez visité zentax.pro récemment.
-
-Si vous avez hésité, c'est correct. Mais la confusion financière ne se règle pas toute seule.
-
-Des livres en retard. Des échéances fiscales qui approchent. Des marges que vous n'arrivez pas à calculer.
-
-Nos CPA ont déjà aidé des dizaines de PME québécoises à reprendre le contrôle — rapidement, sans casse-tête.
-
-Réservez votre consultation stratégique gratuite de 30 minutes. Sans engagement. Sans pression.
-
-👉 zentax.pro/funnel-2`,
-  link_url: 'https://zentax.pro/funnel-2',
-  campaign_name: 'Zentax - Retargeting QC FR',
-  adset_name: 'Visiteurs Web QC FR - Retargeting',
-}
-
-// 3. Full Funnel (conversion-focused, broader targeting)
-const COPY_FUNNEL = {
-  headline: '30 minutes avec un CPA peut changer votre entreprise',
-  body: `Vous gérez une PME au Québec?
-
-Si vos livres ne sont pas à jour, si vous ignorez vos marges réelles, si les échéances fiscales vous stressent — vous n'êtes pas seul.
-
-La plupart des PME perdent des milliers de dollars chaque année à cause d'une mauvaise gestion comptable. Ce n'est pas de la négligence — c'est un manque de système.
-
-Zentax offre la Fondation à 3 Piliers : un système simple et complet, conçu pour les entrepreneurs comme vous.
-
-✅ Livres propres et à jour
-✅ Conformité garantie
-✅ Visibilité totale sur vos finances
-✅ Équipe de CPA dédiée
-
-Consultez un expert gratuitement. 30 minutes. Zéro engagement.
-
-👉 zentax.pro/funnel-2
-
-Agissez avant que les délais fiscaux ne vous rattrapent.`,
-  link_url: 'https://zentax.pro/funnel-2',
-  campaign_name: 'Zentax - Funnel Complet QC FR',
-  adset_name: 'Entrepreneurs QC FR - Funnel',
-}
-
 // ─── Targeting ────────────────────────────────────────────────────────────────
 
-const BASE_GEO = { geo_locations: { regions: [{ key: '3870' }] }, locales: [12], age_min: 25 }
+// Quebec (region key 3870), French speakers, age 25-55
+const BASE_GEO = {
+  geo_locations: { regions: [{ key: '3870' }] },
+  locales: [12],
+  age_min: 25,
+  age_max: 55,
+}
 
-// Cold audience
-const TARGETING_TRAFFIC = { ...BASE_GEO }
+const TARGETING_BROAD = { ...BASE_GEO }
 
-// Website visitors custom audience (ID passed via CLI)
 function targetingRetarget(audienceId) {
   return { ...BASE_GEO, custom_audiences: [{ id: audienceId }] }
 }
 
-// Full funnel — broadest, let Meta optimize (Advantage+ style)
-const TARGETING_FUNNEL = { ...BASE_GEO, age_min: 24 }
+// ─── Objective / optimization mapping ────────────────────────────────────────
+
+const OBJECTIVE_MAP = {
+  LEAD_GENERATION:   'OUTCOME_LEADS',
+  OUTCOME_LEADS:     'OUTCOME_LEADS',
+  TRAFFIC:           'OUTCOME_TRAFFIC',
+  OUTCOME_TRAFFIC:   'OUTCOME_TRAFFIC',
+  CONVERSIONS:       'OUTCOME_SALES',
+  OUTCOME_SALES:     'OUTCOME_SALES',
+  BRAND_AWARENESS:   'OUTCOME_AWARENESS',
+  OUTCOME_AWARENESS: 'OUTCOME_AWARENESS',
+}
+
+const OPTIMIZATION_GOAL_MAP = {
+  OUTCOME_LEADS:     'QUALITY_LEAD',
+  OUTCOME_TRAFFIC:   'LANDING_PAGE_VIEWS',
+  OUTCOME_SALES:     'OFFSITE_CONVERSIONS',
+  OUTCOME_AWARENESS: 'REACH',
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -207,8 +132,17 @@ function isVideo(filePath) {
   return /\.(mp4|mov)$/i.test(filePath)
 }
 
+function findCreativeFile(filename, dirs) {
+  for (const dir of dirs) {
+    if (!dir) continue
+    const full = path.join(dir, filename)
+    if (fs.existsSync(full)) return full
+  }
+  return null
+}
+
 function findThumbnail(videoPath, fallbackDir, globalThumbnail) {
-  // 1. Exact name match (video.mp4 → video.jpg)
+  // 1. Exact name match: video.mp4 → video.jpg
   const base = videoPath.replace(/\.(mp4|mov)$/i, '')
   for (const ext of ['.jpg', '.jpeg', '.png']) {
     if (fs.existsSync(base + ext)) return base + ext
@@ -218,7 +152,7 @@ function findThumbnail(videoPath, fallbackDir, globalThumbnail) {
   const sameDir = path.dirname(videoPath)
   const anyInSame = fs.readdirSync(sameDir).find(f => /\.(jpe?g|png)$/i.test(f))
   if (anyInSame) return path.join(sameDir, anyInSame)
-  // 3. Any image in fallbackDir (e.g. retarget-dir)
+  // 3. Any image in fallbackDir
   if (fallbackDir && fallbackDir !== sameDir) {
     const anyInFallback = fs.readdirSync(fallbackDir).find(f => /\.(jpe?g|png)$/i.test(f))
     if (anyInFallback) return path.join(fallbackDir, anyInFallback)
@@ -296,47 +230,25 @@ async function uploadVideo(videoPath) {
   return data.id
 }
 
-function getCreatives(dir) {
-  if (!fs.existsSync(dir)) throw new Error(`Directory not found: ${dir}`)
-  const allFiles = fs.readdirSync(dir).filter(f => /\.(jpe?g|png|mp4|mov)$/i.test(f))
-  // Build set of video base names so we can exclude their thumbnail images
-  const videoBasenames = new Set(
-    allFiles
-      .filter(f => /\.(mp4|mov)$/i.test(f))
-      .map(f => f.replace(/\.(mp4|mov)$/i, '').toLowerCase())
-  )
-  return allFiles
-    .filter(f => {
-      if (/\.(jpe?g|png)$/i.test(f)) {
-        // Skip images that are thumbnails for a video in the same folder
-        const base = f.replace(/\.(jpe?g|png)$/i, '').toLowerCase()
-        if (videoBasenames.has(base)) return false
-      }
-      return true
-    })
-    .map(f => path.join(dir, f))
-    .sort()
-}
-
 // Builds an asset_feed_spec that routes rwVideoId to Audience Network rewarded
-// video and uses the normal image/video for every other placement.
-function buildFeedSpec({ copy, videoId, thumbHash, imageHash, rwVideoId, rwThumbHash }) {
-  const main = { name: 'main' }
+// video and uses the per-ad copy for every other placement.
+function buildFeedSpec({ adDef, destinationUrl, videoId, thumbHash, imageHash, rwVideoId, rwThumbHash }) {
+  const main     = { name: 'main' }
   const rewarded = { name: 'rewarded' }
   const spec = {
-    bodies: [{ text: copy.body, adlabels: [main] }],
-    titles: [{ text: copy.headline, adlabels: [main] }],
-    link_urls: [{ website_url: copy.link_url, adlabels: [main] }],
-    call_to_action_types: ['LEARN_MORE'],
+    bodies:               [{ text: adDef.primary_text, adlabels: [main] }],
+    titles:               [{ text: adDef.headline,     adlabels: [main] }],
+    link_urls:            [{ website_url: destinationUrl, adlabels: [main] }],
+    call_to_action_types: [adDef.cta_button],
     videos: [{ video_id: rwVideoId, thumbnail_hash: rwThumbHash, adlabels: [rewarded] }],
     asset_customization_rules: [{
       customization_spec: {
-        publisher_platforms: ['audience_network'],
+        publisher_platforms:        ['audience_network'],
         audience_network_positions: ['rewarded_video'],
       },
-      video_label: rewarded,
-      title_label: main,
-      body_label: main,
+      video_label:    rewarded,
+      title_label:    main,
+      body_label:     main,
       link_url_label: main,
     }],
   }
@@ -348,153 +260,6 @@ function buildFeedSpec({ copy, videoId, thumbHash, imageHash, rwVideoId, rwThumb
   return spec
 }
 
-// ─── Run one campaign ──────────────────────────────────────────────────────────
-
-async function runCampaign({ copy, targeting, objective, optimizationGoal = 'LANDING_PAGE_VIEWS', creatives, status, dailyBudgetCents, label, thumbnailFallbackDir, globalThumbnail, rewardedVideoPath }) {
-  const ADS_PER_ADSET = 50
-  const chunks = []
-  for (let i = 0; i < creatives.length; i += ADS_PER_ADSET) chunks.push(creatives.slice(i, i + ADS_PER_ADSET))
-  const totalAdsets = chunks.length
-
-  log(`\n${'─'.repeat(51)}`)
-  log(`  ${label}`)
-  log(`${'─'.repeat(51)}`)
-
-  const campaign = await api('POST', `/act_${ACCOUNT_ID}/campaigns`, {
-    name: copy.campaign_name,
-    objective,
-    status,
-    special_ad_categories: '[]',
-    is_adset_budget_sharing_enabled: false,
-  })
-  log(`  ✓ Campaign: ${campaign.id}  "${copy.campaign_name}"`)
-
-  const adsetIds = []
-  const adResults = []
-
-  // Upload the 9:16 rewarded video once (shared across all ads in this campaign)
-  let rwVideoId = null
-  let rwThumbHash = null
-  if (rewardedVideoPath) {
-    log(`\n  Uploading rewarded video (9:16): ${path.basename(rewardedVideoPath)}`)
-    rwVideoId = await uploadVideo(rewardedVideoPath)
-    log(`    ✓ rewarded video_id: ${rwVideoId}`)
-    const rwThumbPath = findThumbnail(rewardedVideoPath, thumbnailFallbackDir, globalThumbnail)
-    if (rwThumbPath) {
-      rwThumbHash = await uploadImage(rwThumbPath)
-      log(`    ✓ rewarded thumb   : ${rwThumbHash} (${path.basename(rwThumbPath)})`)
-    }
-  }
-
-  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-    const chunk = chunks[chunkIdx]
-    const adsetName = totalAdsets > 1
-      ? `${copy.adset_name} - Part ${chunkIdx + 1}`
-      : copy.adset_name
-
-    const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, {
-      name: adsetName,
-      campaign_id: campaign.id,
-      billing_event: 'IMPRESSIONS',
-      optimization_goal: optimizationGoal,
-      daily_budget: dailyBudgetCents,
-      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-      targeting,
-      status,
-    })
-    log(`  ✓ Ad Set:  ${adset.id}  "${adsetName}"`)
-    adsetIds.push(adset.id)
-
-    for (let j = 0; j < chunk.length; j++) {
-      const filePath = chunk[j]
-      const globalIdx = chunkIdx * ADS_PER_ADSET + j + 1
-      const adLabel = `${copy.campaign_name} - Creative ${globalIdx}`
-      const fileType = isVideo(filePath) ? 'video' : 'image'
-      log(`\n    [${globalIdx}/${creatives.length}] ${path.basename(filePath)} (${fileType})`)
-
-      let creativePayload
-      if (isVideo(filePath)) {
-        const thumbPath = findThumbnail(filePath, thumbnailFallbackDir, globalThumbnail)
-        if (!thumbPath) {
-          throw new Error(
-            `No thumbnail found for ${path.basename(filePath)}.\n` +
-            `  Create: ${path.basename(filePath).replace(/\.(mp4|mov)$/i, '')}.jpg\n` +
-            `  Or add any .jpg/.png image to the folder as a fallback thumbnail.`
-          )
-        }
-        const videoId = await uploadVideo(filePath)
-        log(`      ✓ video_id  : ${videoId}`)
-        const thumbHash = await uploadImage(thumbPath)
-        log(`      ✓ thumbnail : ${thumbHash} (${path.basename(thumbPath)})`)
-        if (rwVideoId) {
-          creativePayload = {
-            name: `${adLabel} Creative`,
-            page_id: PAGE_ID,
-            instagram_actor_id: INSTAGRAM_ACTOR_ID,
-            asset_feed_spec: buildFeedSpec({ copy, videoId, thumbHash, rwVideoId, rwThumbHash: rwThumbHash || thumbHash }),
-          }
-        } else {
-          creativePayload = {
-            name: `${adLabel} Creative`,
-            object_story_spec: {
-              page_id: PAGE_ID,
-              instagram_actor_id: INSTAGRAM_ACTOR_ID,
-              video_data: {
-                video_id: videoId,
-                image_hash: thumbHash,
-                message: copy.body,
-                title: copy.headline,
-                call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
-              },
-            },
-          }
-        }
-      } else {
-        const imageHash = await uploadImage(filePath)
-        log(`      ✓ image_hash: ${imageHash}`)
-        if (rwVideoId) {
-          creativePayload = {
-            name: `${adLabel} Creative`,
-            page_id: PAGE_ID,
-            instagram_actor_id: INSTAGRAM_ACTOR_ID,
-            asset_feed_spec: buildFeedSpec({ copy, imageHash, rwVideoId, rwThumbHash }),
-          }
-        } else {
-          creativePayload = {
-            name: `${adLabel} Creative`,
-            object_story_spec: {
-              page_id: PAGE_ID,
-              instagram_actor_id: INSTAGRAM_ACTOR_ID,
-              link_data: {
-                image_hash: imageHash,
-                link: copy.link_url,
-                message: copy.body,
-                name: copy.headline,
-                call_to_action: { type: 'LEARN_MORE', value: { link: copy.link_url } },
-              },
-            },
-          }
-        }
-      }
-
-      const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, creativePayload)
-      log(`      ✓ creative  : ${creative.id}`)
-
-      const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, {
-        name: adLabel,
-        adset_id: adset.id,
-        creative: { creative_id: creative.id },
-        status,
-      })
-      log(`      ✓ ad        : ${ad.id}`)
-
-      adResults.push({ file: path.basename(filePath), type: fileType, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id })
-    }
-  }
-
-  return { campaign, adsetIds, adResults }
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -503,142 +268,318 @@ async function main() {
     process.exit(1)
   }
 
+  const configPath = args['config']
+  if (!configPath) {
+    console.error([
+      'Error: --config is required.',
+      '  --config "C:\\Users\\takie\\Downloads\\campaign.json"',
+      '',
+      'The config JSON must follow this structure:',
+      '  {',
+      '    "destination_url": "https://zentax.pro/funnel-2",',
+      '    "campaigns": {',
+      '      "ACQUISITION": {',
+      '        "campaign_name": "ZTX | ACQ | QC-FR | 2026-03-10",',
+      '        "objective": "LEAD_GENERATION",',
+      '        "budget_daily": 120,',
+      '        "ad_sets": [',
+      '          {',
+      '            "ad_set_name": "ZTX | ACQ | STATIC | BROAD-QC-FR",',
+      '            "budget_daily": 60,',
+      '            "ads": [',
+      '              {',
+      '                "filename": "my-creative.png",',
+      '                "ad_name": "ZTX | FEAR | IMG | example",',
+      '                "format": "IMAGE",',
+      '                "primary_text": "...",',
+      '                "headline": "...",',
+      '                "description": "...",',
+      '                "cta_button": "LEARN_MORE"',
+      '              }',
+      '            ]',
+      '          }',
+      '        ]',
+      '      }',
+      '    }',
+      '  }',
+    ].join('\n'))
+    process.exit(1)
+  }
+
+  if (!fs.existsSync(configPath)) {
+    console.error(`Error: Config file not found: ${configPath}`)
+    process.exit(1)
+  }
+
+  let config
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+  } catch (e) {
+    console.error(`Error: Invalid JSON in config file: ${e.message}`)
+    process.exit(1)
+  }
+
+  const destinationUrl = config.destination_url
+  if (!destinationUrl) {
+    console.error('Error: Config missing "destination_url"')
+    process.exit(1)
+  }
+
   const frDir = args['fr-dir']
   if (!frDir) {
     console.error('Error: --fr-dir is required.\n  --fr-dir "C:\\Users\\takie\\Downloads\\Creatives"')
     process.exit(1)
   }
-
-  const creatives = getCreatives(frDir)
-  if (creatives.length === 0) {
-    console.error(`No .jpg/.jpeg/.png/.mp4/.mov files found in: ${frDir}`)
+  if (!fs.existsSync(frDir)) {
+    console.error(`Error: --fr-dir not found: ${frDir}`)
     process.exit(1)
   }
 
-  const retargetDir = args['retarget-dir'] || frDir
-  const retargetCreatives = getCreatives(retargetDir)
-  if (retargetCreatives.length === 0) {
-    console.error(`No .jpg/.jpeg/.png/.mp4/.mov files found in retarget-dir: ${retargetDir}`)
-    process.exit(1)
-  }
-
-  const dailyBudget = parseFloat(args['daily-budget'] || '100')
-  const dailyBudgetCents = Math.round(dailyBudget * 100)
-  const status = args.status || 'PAUSED'
+  const retargetDir      = args['retarget-dir'] || frDir
+  const status           = args.status || 'PAUSED'
   const retargetAudienceId = args['retarget-audience-id']
-  const skipTraffic  = !!args['skip-traffic']
-  const skipRetarget = !!args['skip-retarget']
-  const skipFunnel   = !!args['skip-funnel']
-  const globalThumbnail = args['thumbnail'] || null
+  const globalThumbnail  = args['thumbnail'] || null
   const rewardedVideoPath = args['rewarded-video'] || null
-  if (rewardedVideoPath && !require('fs').existsSync(rewardedVideoPath)) {
+
+  if (rewardedVideoPath && !fs.existsSync(rewardedVideoPath)) {
     console.error(`Error: --rewarded-video file not found: ${rewardedVideoPath}`)
     process.exit(1)
   }
 
-  const imgCount = creatives.filter(f => !isVideo(f)).length
-  const vidCount = creatives.filter(f => isVideo(f)).length
-  const rImgCount = retargetCreatives.filter(f => !isVideo(f)).length
-  const rVidCount = retargetCreatives.filter(f => isVideo(f)).length
-  const planned = [
-    !skipTraffic  && 'Traffic',
-    !skipRetarget && retargetAudienceId && 'Retargeting',
-    !skipFunnel   && 'Full Funnel',
-  ].filter(Boolean)
+  const campaignKeys = Object.keys(config.campaigns)
 
-  log(`\n${'═'.repeat(51)}`)
+  log(`\n${'═'.repeat(57)}`)
   log(`  Zentax Campaign Launcher${DRY_RUN ? ' [DRY RUN]' : ''}`)
-  log(`${'═'.repeat(51)}`)
+  log(`${'═'.repeat(57)}`)
   log(`  Account    : act_${ACCOUNT_ID}`)
-  log(`  Budget     : $${dailyBudget} CAD/day per ad set`)
   log(`  Status     : ${status}`)
-  log(`  Traffic/Funnel creatives : ${creatives.length} (${imgCount} img, ${vidCount} vid) — ${frDir}`)
-  log(`  Retargeting creatives    : ${retargetCreatives.length} (${rImgCount} img, ${rVidCount} vid) — ${retargetDir}`)
-  log(`  Campaigns  : ${planned.join(' + ') || '(none selected)'}`)
-  log(`  Rewarded video : ${rewardedVideoPath ? path.basename(rewardedVideoPath) : '(none — placement excluded)'}`)
-  log(`${'═'.repeat(51)}`)
+  log(`  Config     : ${path.basename(configPath)}`)
+  log(`  Creatives  : ${frDir}`)
+  log(`  Campaigns  : ${campaignKeys.join(', ')}`)
+  log(`  Rewarded   : ${rewardedVideoPath ? path.basename(rewardedVideoPath) : '(none — placement excluded)'}`)
+  log(`${'═'.repeat(57)}`)
 
   const allResults = []
-  let step = 1
-  const total = planned.length
 
-  // ── 1. Traffic (cold) ──
-  if (!skipTraffic) {
-    const traffic = await runCampaign({
-      label: `${step++}/${total}  TRAFFIC — Cold Quebec/French audience`,
-      copy: COPY_TRAFFIC,
-      targeting: TARGETING_TRAFFIC,
-      objective: 'OUTCOME_TRAFFIC',
-      creatives,
+  for (const campaignKey of campaignKeys) {
+    const campaignDef  = config.campaigns[campaignKey]
+    const isRetargeting = /RETARGET|RTG/i.test(campaignKey)
+    const metaObjective = OBJECTIVE_MAP[campaignDef.objective] || campaignDef.objective
+    const optimGoal     = OPTIMIZATION_GOAL_MAP[metaObjective] || 'QUALITY_LEAD'
+
+    log(`\n${'─'.repeat(57)}`)
+    log(`  [${campaignKey}] ${campaignDef.campaign_name}`)
+    log(`  Objective: ${metaObjective}  Optimization: ${optimGoal}`)
+    log(`${'─'.repeat(57)}`)
+
+    const campaign = await api('POST', `/act_${ACCOUNT_ID}/campaigns`, {
+      name:                            campaignDef.campaign_name,
+      objective:                       metaObjective,
       status,
-      dailyBudgetCents,
-      thumbnailFallbackDir: retargetDir,
-      globalThumbnail,
-      rewardedVideoPath,
+      special_ad_categories:           '[]',
+      is_adset_budget_sharing_enabled: false,
     })
-    allResults.push({ name: 'Traffic', ...traffic })
-  } else {
-    log(`\n  ↷  Skipping Traffic campaign (--skip-traffic)`)
-  }
+    log(`  ✓ Campaign: ${campaign.id}  "${campaignDef.campaign_name}"`)
 
-  // ── 2. Retargeting ──
-  if (!skipRetarget) {
-    if (retargetAudienceId) {
-      const retarget = await runCampaign({
-        label: `${step++}/${total}  RETARGETING — Website visitors`,
-        copy: COPY_RETARGET,
-        targeting: targetingRetarget(retargetAudienceId),
-        objective: 'OUTCOME_LEADS',
-        optimizationGoal: 'QUALITY_LEAD',
-        creatives: retargetCreatives,
+    const adSetResults = []
+
+    for (const adSetDef of campaignDef.ad_sets) {
+      const adSetBudgetCents = Math.round(adSetDef.budget_daily * 100)
+
+      const targeting = (isRetargeting && retargetAudienceId)
+        ? targetingRetarget(retargetAudienceId)
+        : TARGETING_BROAD
+
+      if (isRetargeting && !retargetAudienceId) {
+        log(`\n  ⚠  "${adSetDef.ad_set_name}" is a RETARGETING ad set.`)
+        log(`     Pass --retarget-audience-id <id> to use a custom audience.`)
+        log(`     Launching with broad targeting as fallback.`)
+      }
+
+      const adset = await api('POST', `/act_${ACCOUNT_ID}/adsets`, {
+        name:              adSetDef.ad_set_name,
+        campaign_id:       campaign.id,
+        billing_event:     'IMPRESSIONS',
+        optimization_goal: optimGoal,
+        daily_budget:      adSetBudgetCents,
+        bid_strategy:      'LOWEST_COST_WITHOUT_CAP',
+        targeting,
         status,
-        dailyBudgetCents,
-        thumbnailFallbackDir: retargetDir,
-        globalThumbnail,
-        rewardedVideoPath,
       })
-      allResults.push({ name: 'Retargeting', ...retarget })
-    } else {
-      log(`\n  ⚠  Skipping Retargeting — pass --retarget-audience-id <id> to enable it.`)
-    }
-  } else {
-    log(`\n  ↷  Skipping Retargeting campaign (--skip-retarget)`)
-  }
+      log(`\n  ✓ Ad Set: ${adset.id}  "${adSetDef.ad_set_name}"`)
+      log(`    Budget: $${adSetDef.budget_daily} CAD/day`)
 
-  // ── 3. Full Funnel ──
-  if (!skipFunnel) {
-    const funnel = await runCampaign({
-      label: `${step++}/${total}  FULL FUNNEL — Conversion-focused, broader targeting`,
-      copy: COPY_FUNNEL,
-      targeting: TARGETING_FUNNEL,
-      objective: 'OUTCOME_LEADS',
-      optimizationGoal: 'QUALITY_LEAD',
-      creatives,
-      status,
-      dailyBudgetCents,
-      thumbnailFallbackDir: retargetDir,
-      globalThumbnail,
-      rewardedVideoPath,
+      // Upload the 9:16 rewarded video once per ad set (shared across all ads in this set)
+      let rwVideoId   = null
+      let rwThumbHash = null
+      if (rewardedVideoPath) {
+        log(`\n    Uploading rewarded video (9:16): ${path.basename(rewardedVideoPath)}`)
+        rwVideoId = await uploadVideo(rewardedVideoPath)
+        log(`      ✓ rewarded video_id: ${rwVideoId}`)
+        const rwThumbPath = findThumbnail(rewardedVideoPath, retargetDir, globalThumbnail)
+        if (rwThumbPath) {
+          rwThumbHash = await uploadImage(rwThumbPath)
+          log(`      ✓ rewarded thumb   : ${rwThumbHash} (${path.basename(rwThumbPath)})`)
+        }
+      }
+
+      const adResults = []
+      const creativeDirs = isRetargeting ? [retargetDir, frDir] : [frDir, retargetDir]
+
+      for (const adDef of adSetDef.ads) {
+        const filePath = findCreativeFile(adDef.filename, creativeDirs)
+        if (!filePath) {
+          if (DRY_RUN) {
+            log(`\n    [DRY-RUN] ⚠  File not found: ${adDef.filename} — skipping`)
+            continue
+          }
+          throw new Error(
+            `Creative file not found: ${adDef.filename}\n` +
+            `  Searched in: ${creativeDirs.join(', ')}`
+          )
+        }
+
+        const fileType = isVideo(filePath) ? 'video' : 'image'
+        log(`\n    [${adDef.ad_name}]`)
+        log(`      File  : ${adDef.filename} (${fileType})`)
+        log(`      Angle : ${adDef.angle || '—'}`)
+
+        let creativePayload
+
+        if (isVideo(filePath)) {
+          // ── Video creative ──────────────────────────────────────────────────
+          const thumbPath = findThumbnail(filePath, retargetDir, globalThumbnail)
+          if (!thumbPath && !DRY_RUN) {
+            throw new Error(
+              `No thumbnail found for ${adDef.filename}.\n` +
+              `  Create: ${adDef.filename.replace(/\.(mp4|mov)$/i, '')}.jpg next to the video.`
+            )
+          }
+          const videoId  = await uploadVideo(filePath)
+          log(`      ✓ video_id  : ${videoId}`)
+          const thumbHash = thumbPath ? await uploadImage(thumbPath) : null
+          if (thumbPath) log(`      ✓ thumbnail : ${thumbHash} (${path.basename(thumbPath)})`)
+
+          if (rwVideoId) {
+            creativePayload = {
+              name:            `${adDef.ad_name} Creative`,
+              page_id:         PAGE_ID,
+              instagram_actor_id: INSTAGRAM_ACTOR_ID,
+              asset_feed_spec: buildFeedSpec({
+                adDef, destinationUrl,
+                videoId, thumbHash: thumbHash || rwThumbHash,
+                rwVideoId, rwThumbHash: rwThumbHash || thumbHash,
+              }),
+            }
+          } else {
+            creativePayload = {
+              name: `${adDef.ad_name} Creative`,
+              object_story_spec: {
+                page_id:            PAGE_ID,
+                instagram_actor_id: INSTAGRAM_ACTOR_ID,
+                video_data: {
+                  video_id:   videoId,
+                  image_hash: thumbHash,
+                  message:    adDef.primary_text,
+                  title:      adDef.headline,
+                  call_to_action: { type: adDef.cta_button, value: { link: destinationUrl } },
+                },
+              },
+            }
+          }
+
+        } else {
+          // ── Image creative ──────────────────────────────────────────────────
+          const imageHash = await uploadImage(filePath)
+          log(`      ✓ image_hash: ${imageHash}`)
+
+          if (rwVideoId) {
+            creativePayload = {
+              name:            `${adDef.ad_name} Creative`,
+              page_id:         PAGE_ID,
+              instagram_actor_id: INSTAGRAM_ACTOR_ID,
+              asset_feed_spec: buildFeedSpec({
+                adDef, destinationUrl,
+                imageHash, rwVideoId, rwThumbHash,
+              }),
+            }
+          } else {
+            creativePayload = {
+              name: `${adDef.ad_name} Creative`,
+              object_story_spec: {
+                page_id:            PAGE_ID,
+                instagram_actor_id: INSTAGRAM_ACTOR_ID,
+                link_data: {
+                  image_hash:  imageHash,
+                  link:        destinationUrl,
+                  message:     adDef.primary_text,
+                  name:        adDef.headline,
+                  description: adDef.description,
+                  call_to_action: { type: adDef.cta_button, value: { link: destinationUrl } },
+                },
+              },
+            }
+          }
+        }
+
+        const creative = await api('POST', `/act_${ACCOUNT_ID}/adcreatives`, creativePayload)
+        log(`      ✓ creative  : ${creative.id}`)
+
+        const ad = await api('POST', `/act_${ACCOUNT_ID}/ads`, {
+          name:      adDef.ad_name,
+          adset_id:  adset.id,
+          creative:  { creative_id: creative.id },
+          status,
+        })
+        log(`      ✓ ad        : ${ad.id}`)
+
+        adResults.push({
+          ad_name:    adDef.ad_name,
+          file:       adDef.filename,
+          type:       fileType,
+          ad_id:      ad.id,
+          creative_id: creative.id,
+        })
+      }
+
+      adSetResults.push({
+        ad_set_name: adSetDef.ad_set_name,
+        adset_id:    adset.id,
+        ads:         adResults,
+      })
+    }
+
+    allResults.push({
+      campaign_key:  campaignKey,
+      campaign_name: campaignDef.campaign_name,
+      campaign_id:   campaign.id,
+      ad_sets:       adSetResults,
     })
-    allResults.push({ name: 'Full Funnel', ...funnel })
-  } else {
-    log(`\n  ↷  Skipping Full Funnel campaign (--skip-funnel)`)
   }
 
   // ── Summary ──
-  log(`\n${'═'.repeat(51)}`)
+  log(`\n${'═'.repeat(57)}`)
   log(`  All done!`)
-  log(`${'═'.repeat(51)}`)
+  log(`${'═'.repeat(57)}`)
+
+  let totalAds = 0
   for (const r of allResults) {
-    log(`\n  [${r.name}] Campaign ID: ${r.campaign.id}`)
-    log(`    Ad sets (${r.adsetIds.length}): ${r.adsetIds.join(', ')}`)
-    log(`    Ads created: ${r.adResults.length}`)
+    log(`\n  [${r.campaign_key}] ${r.campaign_name}`)
+    log(`    Campaign ID : ${r.campaign_id}`)
+    for (const s of r.ad_sets) {
+      log(`    Ad Set: "${s.ad_set_name}"  (${s.ads.length} ads)  ID: ${s.adset_id}`)
+      totalAds += s.ads.length
+    }
   }
-  log(`\n  All ads are ${status}. Review in Meta Ads Manager,`)
+
+  log(`\n  Total ads created: ${totalAds}`)
+  log(`  All ads are ${status}. Review in Meta Ads Manager,`)
   log(`  then activate when ready.`)
   log(`  https://adsmanager.facebook.com/`)
-  log(`${'═'.repeat(51)}\n`)
+  log(`${'═'.repeat(57)}\n`)
 }
+
+// ─── Find targeting (utility) ─────────────────────────────────────────────────
 
 async function findTargeting() {
   if (!TOKEN) {
@@ -647,9 +588,8 @@ async function findTargeting() {
   }
   console.log('\n Looking up correct targeting keys from Meta API...\n')
 
-  // Quebec region key
   const geoUrl = `${BASE_URL}/search?type=adgeolocation&q=Quebec&location_types=%5B%22region%22%5D&country_code=CA&access_token=${TOKEN}`
-  const geoRes = await fetch(geoUrl)
+  const geoRes  = await fetch(geoUrl)
   const geoData = await geoRes.json()
   console.log('=== Quebec region results ===')
   if (geoData.data && geoData.data.length > 0) {
@@ -658,9 +598,8 @@ async function findTargeting() {
     console.log('  No results or error:', JSON.stringify(geoData))
   }
 
-  // French locale ID
-  const localeUrl = `${BASE_URL}/search?type=adlocale&q=French&access_token=${TOKEN}`
-  const localeRes = await fetch(localeUrl)
+  const localeUrl  = `${BASE_URL}/search?type=adlocale&q=French&access_token=${TOKEN}`
+  const localeRes  = await fetch(localeUrl)
   const localeData = await localeRes.json()
   console.log('\n=== French locale results ===')
   if (localeData.data && localeData.data.length > 0) {
@@ -668,7 +607,7 @@ async function findTargeting() {
   } else {
     console.log('  No results or error:', JSON.stringify(localeData))
   }
-  console.log('\nUpdate TARGETING_FR in the script with the correct key values above.\n')
+  console.log('\nUpdate BASE_GEO in the script with the correct key values above.\n')
 }
 
 if (args['find-targeting']) {
