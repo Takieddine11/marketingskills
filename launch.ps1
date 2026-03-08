@@ -5,8 +5,8 @@
 
 # ── CONFIG (edit these paths once) ──────────────────────────
 $TOKEN_FILE    = "$env:USERPROFILE\meta_token.txt"          # File containing your Meta access token
-$SCRIPT        = "C:\Users\takie\Downloads\zentax-campaign-launch.js"  # Path to the JS script
-$CREATIVES_DIR = "C:\Users\takie\Downloads\Creatives"       # Folder with Creative Final\ Retargeting\ Videos\
+$SCRIPT        = "$env:USERPROFILE\Downloads\zentax-campaign-launch.js"  # Path to the JS script
+$CREATIVES_DIR = "$env:USERPROFILE\Downloads\Creatives"     # Folder with Creative Final\ Retargeting\ Videos\
 $STATUS        = "PAUSED"                                    # PAUSED or ACTIVE
 $DRY_RUN       = $false                                      # Set to $true to preview without spending
 # ────────────────────────────────────────────────────────────
