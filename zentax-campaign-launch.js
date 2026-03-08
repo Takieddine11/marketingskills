@@ -29,7 +29,7 @@ const COPY_FUNNEL = {
   campaign_name: 'Zentax - Funnel Complet QC FR',
   adset_name: 'Entrepreneurs QC FR - Funnel',
 }
-const BASE_GEO = { geo_locations: { regions: [{ key: '535' }] }, locales: [44], age_min: 25 }
+const BASE_GEO = { geo_locations: { regions: [{ key: '535' }] }, locales: [44], age_min: 25, targeting_automation: { advantage_audience: 0 } }
 const TARGETING_TRAFFIC = { ...BASE_GEO }
 function targetingRetarget(audienceId) {
   return { ...BASE_GEO, custom_audiences: [{ id: audienceId }] }
