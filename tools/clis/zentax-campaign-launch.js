@@ -279,7 +279,7 @@ const OBJECTIVE_MAP = {
 }
 
 const OPTIM_GOAL_MAP = {
-  OUTCOME_LEADS:   'QUALITY_LEAD',
+  OUTCOME_LEADS:   'OFFSITE_CONVERSIONS', // pixel-based website funnel (not Meta Lead Ads forms)
   OUTCOME_TRAFFIC: 'LANDING_PAGE_VIEWS',
 }
 
